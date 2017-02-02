@@ -1277,7 +1277,7 @@ function lib:CreateOverlayGlow()
 	overlay.animIn = overlay:CreateAnimationGroup();
 	CreateScaleAnim(overlay.animIn, "Spark", 1, 0.2, 1.5, 1.5, nil, nil, nil, AnimIn_OnPlay);
 	CreateAlphaAnim(overlay.animIn, "Spark", 1, 0.2, 1);
-	CreateScaleAnim(overlay.animIn, "InnerGlow", 1, 0.3, 2, 2, 1);
+	CreateScaleAnim(overlay.animIn, "InnerGlow", 1, 0.3, 2, 2);
 	CreateScaleAnim(overlay.animIn, "InnerGlowOver", 1, 0.3, 2, 2);
 	CreateAlphaAnim(overlay.animIn, "InnerGlowOver", 1, 0.3, -1);
 	CreateScaleAnim(overlay.animIn, "OuterGlow", 1, 0.3, 0.5, 0.5);

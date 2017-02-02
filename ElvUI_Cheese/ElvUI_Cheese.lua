@@ -44,7 +44,7 @@ end
 
 local function OnButtonContentsChanged(self, arg1, state, arg3, arg4)
 	if(state == "action") then
-	
+		
 	end
 end
 
