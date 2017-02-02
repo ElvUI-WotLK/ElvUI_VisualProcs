@@ -1,5 +1,4 @@
 ﻿local E, L, V, P, G = unpack(ElvUI);
-local addon = E:NewModule("Cheese", "AceHook-3.0", "AceEvent-3.0");
 
 local LAB = LibStub("LibActionButton-1.0");
 local LBG = LibStub("LibButtonGlow-1.0", true);
@@ -42,29 +41,25 @@ function OnEventOverlayGlowHide(self, arg1)
 	end
 end
 
-local function OnButtonContentsChanged(self, arg1, state, arg3, arg4)
+local function OnButtonContentsChanged(event, arg1, state, arg3, arg4)
 	if(state == "action") then
 		
 	end
 end
 
-local function OnButtonUpdate(self, button)
+local function OnButtonUpdate(event, button)
 	--if(button._state_type ~= "action") then return; end
 
-	LBG.ChangeAction(button._state_action, button:GetSpellId());
+	--LBG.ChangeAction(button._state_action, button:GetSpellId());
 
 	UpdateOverlayGlow(button);
 end
 
 local isBlizzard = false;
 
-function addon:Initialize()
-	if(isBlizzard) then
-		
-	else
-		LAB.RegisterCallback(addon, "OnButtonContentsChanged", OnButtonContentsChanged);
-		LAB.RegisterCallback(addon, "OnButtonUpdate", OnButtonUpdate);
-	end
+if(isBlizzard) then
+	
+else
+	LAB.RegisterCallback(LBG, "OnButtonContentsChanged", OnButtonContentsChanged);
+	LAB.RegisterCallback(LBG, "OnButtonUpdate", OnButtonUpdate);
 end
-
-E:RegisterModule(addon:GetName())
