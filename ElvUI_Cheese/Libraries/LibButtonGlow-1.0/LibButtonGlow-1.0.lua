@@ -46,20 +46,7 @@ lib.overlayGlow = lib.overlayGlow or {};
 lib.overlayGlow.unused = lib.overlayGlow.unused or {};
 lib.overlayGlow.num = lib.overlayGlow.num or 0;
 
-local actionButtons = {
-	nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,
-	nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,
-	nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,
-	nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,
-	nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,
-	nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,
-	nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,
-	nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,
-	nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,
-	nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,
-	nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,
-	nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,
-};
+local actionButtons = {};
 
 local buffGlowSpells = {};
 local buffs = {};
@@ -89,7 +76,7 @@ local function RemoveOverlayGlow(spellId)
 	end
 end
 
-function lib.SetAction(action, globalID)
+function lib:SetAction(action, globalID)
 	actionButtons[action] = globalID;
 	if(globalID) then
 		local glowSpellK = GetOverlayGlowSpellMap()[globalID];
@@ -123,7 +110,7 @@ function lib.SetAction(action, globalID)
 	end
 end
 
-function lib.ChangeAction(action, newGlobalID)
+function lib:ChangeAction(action, newGlobalID)
 	local globalID = actionButtons[action];
 	if(globalID) then
 		local glowSpellK = GetOverlayGlowSpellMap()[globalID];
@@ -150,7 +137,7 @@ function lib.ChangeAction(action, newGlobalID)
 			until(not spellID);
 		end
 	end
-	lib.SetAction(action, newGlobalID);
+	lib:SetAction(action, newGlobalID);
 end
 
 local function BuffGained(spellID, k, overlayTable)
@@ -867,15 +854,6 @@ end
 -- 
 
 function lib.Init()
-	for action = 1, 144 do
-		local actionType, id, _, globalID = GetActionInfo(action);
-		if(actionType == "spell") then
-			lib.SetAction(action, globalID);
-		elseif(actionType == "macro") then
-			lib.SetAction(action, GetSpellIdByName(GetMacroSpell(id)));
-		end
-	end
-
 	local unit = PlayerFrame.unit;
 	local name, _, _, count, _, _, _, _, _, _, spellID = UnitBuff(unit, 1);
 	if(name) then
