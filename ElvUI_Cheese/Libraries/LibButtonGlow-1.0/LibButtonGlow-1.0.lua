@@ -141,7 +141,7 @@ function lib:ChangeAction(action, newGlobalID)
 end
 
 local function BuffGained(spellID, k, overlayTable)
-	if(k < OVERLAYS_UPPER_BOUND) then -- Это код на текстуры
+	if(k < OVERLAYS_UPPER_BOUND) then
 		local texture = lib.mediaPath .. overlayTable[k + 1];
 		local positions = overlayTable[k + 2];
 		local scale = overlayTable[k + 3];
@@ -154,7 +154,7 @@ local function BuffGained(spellID, k, overlayTable)
 		end
 	end
 
-	local glowSpells = buffGlowSpells[spellID]; -- Вроде как на панели
+	local glowSpells = buffGlowSpells[spellID];
 	if(glowSpells) then
 		for globalID in pairs(glowSpells) do
 			AddOverlayGlow(globalID);
@@ -163,11 +163,11 @@ local function BuffGained(spellID, k, overlayTable)
 end
 
 local function BuffLost(spellID)
-	for frame, func in pairs(lib.overlayHide) do -- Это код на текстуры
+	for frame, func in pairs(lib.overlayHide) do
 		func(frame, spellID);
 	end
 
-	local glowSpells = buffGlowSpells[spellID]; -- Вроде как на панели
+	local glowSpells = buffGlowSpells[spellID];
 	if(glowSpells) then
 		for globalID in pairs(glowSpells) do
 			RemoveOverlayGlow(globalID);
@@ -178,31 +178,30 @@ end
 function lib.OnEvent(self, event, unitID)
 	local unit = PlayerFrame.unit;
 	if(unitID == unit) then
-		do
-			local name, _, _, count, _, _, _, _, _, _, spellID = UnitBuff(unit, 1);
-			if(name) then
-				local overlayMap = GetOverlayMap();
-				local overlayTable;
-				local j = 1;
-				repeat
-					local k = overlayMap[spellID];
-					if(k) then
-						if(not overlayTable) then
-							overlayTable = GetOverlayTable();
-						end
-						if(not (count < overlayTable[k])) then
-							local hasBuff = buffs[spellID];
-							buffs[spellID] = false;
-							if(hasBuff == nil) then
-								BuffGained(spellID, k, overlayTable);
-							end
+		local name, _, _, count, _, _, _, _, _, _, spellID = UnitBuff(unit, 1);
+		if(name) then
+			local overlayMap = GetOverlayMap();
+			local overlayTable;
+			local j = 1;
+			repeat
+				local k = overlayMap[spellID];
+				if(k) then
+					if(not overlayTable) then
+						overlayTable = GetOverlayTable();
+					end
+					if(not (count < overlayTable[k])) then
+						local hasBuff = buffs[spellID];
+						buffs[spellID] = false;
+						if(hasBuff == nil) then
+							BuffGained(spellID, k, overlayTable);
 						end
 					end
-					j = j + 1;
-					name, _, _, count, _, _, _, _, _, _, spellID = UnitBuff(unit, j);
-				until(not name);
-			end
+				end
+				j = j + 1;
+				name, _, _, count, _, _, _, _, _, _, spellID = UnitBuff(unit, j);
+			until(not name);
 		end
+
 		for spellID, hasBuff in pairs(buffs) do
 			if(not hasBuff) then
 				buffs[spellID] = true;
@@ -212,15 +211,6 @@ function lib.OnEvent(self, event, unitID)
 			end
 		end
 	end
-end
-
-local function GetSpellIdByName(spellName)
-	if(not spellName) then return; end
-	local spellLink = GetSpellLink(spellName);
-	if(spellLink) then
-		return tonumber(spellLink:match("spell:(%d+)"));
-	end
-	return nil;
 end
 
 function lib:IsSpellOverlayed(spellID)
@@ -241,8 +231,15 @@ function lib:UnregisterEvent(event, frame)
 	end
 end
 
--- Animation Functions
+function lib:IsEventRegistered(event, frame)
+	local isEvent = lib.event[event];
+	if(isEvent and isEvent[frame]) then
+		return true;
+	end
+	return false;
+end
 
+-- Animation Functions
 local function InitAlphaAnimation(self)
 	local target = self.target;
 	if(not target) then
@@ -410,7 +407,7 @@ end
 
 local ScaleAnimation_OnFinished = ScaleAnimation_OnStop;
 
-local function CreateScaleAnim(group, target, order, duration, x, y, delay, endDelay, smoothing, onPlay)
+local function CreateScaleAnim(group, target, order, duration, x, y, delay, smoothing, onPlay)
 	local scale = group:CreateAnimation();
 	if(target) then
 		scale.target = _G[scale:GetRegionParent():GetName() .. target];
@@ -421,9 +418,6 @@ local function CreateScaleAnim(group, target, order, duration, x, y, delay, endD
 
 	if(delay) then
 		scale:SetStartDelay(delay);
-	end
-	if(endDelay) then
-		scale:SetEndDelay(endDelay)
 	end
 
 	if(smoothing) then
@@ -468,7 +462,6 @@ local function AnimateTexCoords(texture, textureWidth, textureHeight, frameWidth
 end
 
 -- Overlay Glow Functions
-
 local function OverlayGlowAnimOutFinished(self)
 	local overlay = self:GetParent();
 	local frame = overlay:GetParent();
@@ -486,14 +479,6 @@ end
 
 local function OverlayGlow_OnUpdate(self, elapsed)
 	AnimateTexCoords(self.ants, 256, 256, 48, 48, 22, elapsed, 0.01);
-	--local cooldown = self:GetParent().cooldown;
-	-- we need some threshold to avoid dimming the glow during the gdc
-	-- (using 1500 exactly seems risky, what if casting speed is slowed or something?)
-	--if(cooldown and cooldown:IsShown() and cooldown:GetCooldownDuration() > 3000) then
-	--	self:SetAlpha(0.5);
-	--else
-	--	self:SetAlpha(1.0);
-	--end
 end
 
 local function AnimIn_OnPlay(self)
@@ -573,7 +558,7 @@ function lib:CreateOverlayGlow()
 	overlay.ants:SetTexture(lib.mediaPath .. "IconAlertAnts");
 
 	overlay.animIn = overlay:CreateAnimationGroup();
-	CreateScaleAnim(overlay.animIn, "Spark", 1, 0.2, 1.5, 1.5, nil, nil, nil, AnimIn_OnPlay);
+	CreateScaleAnim(overlay.animIn, "Spark", 1, 0.2, 1.5, 1.5, nil, nil, AnimIn_OnPlay);
 	CreateAlphaAnim(overlay.animIn, "Spark", 1, 0.2, 1);
 	CreateScaleAnim(overlay.animIn, "InnerGlow", 1, 0.3, 2, 2);
 	CreateScaleAnim(overlay.animIn, "InnerGlowOver", 1, 0.3, 2, 2);
@@ -649,26 +634,13 @@ function lib:HideOverlayGlow(frame)
 end
 
 -- Overlay Functions
-
-local sizeScale = 0.8;
-local longSide = 256 * sizeScale;
-local shortSide = 128 * sizeScale;
+lib.overlay.sizeScale = lib.overlay.sizeScale or 0.8;
+lib.overlay.longSide = 256 * lib.overlay.sizeScale;
+lib.overlay.shortSide = 128 * lib.overlay.sizeScale;
 
 lib.overlayFrame = lib.overlayFrame or CreateFrame("Frame", nil, UIParent);
-lib.overlayFrame:SetSize(longSide, longSide);
+lib.overlayFrame:SetSize(lib.overlay.longSide, lib.overlay.longSide);
 lib.overlayFrame:SetPoint("CENTER");
-
-lib:RegisterEvent("SPELL_ACTIVATION_OVERLAY_SHOW", lib.overlayFrame, function(self, spellID, texture, positions, scale, r, g, b)
-	lib:ShowAllOverlays(self, spellID, texture, positions, scale, r, g, b);
-end);
-
-lib:RegisterEvent("SPELL_ACTIVATION_OVERLAY_HIDE", lib.overlayFrame, function(self, spellID)
-	if(spellID) then
-		lib:HideOverlays(self, spellID);
-	else
-		lib:HideAllOverlays(self);
-	end
-end);
 
 local complexLocationTable = {
 	["RIGHT (FLIPPED)"] = {
@@ -716,31 +688,31 @@ function lib:ShowOverlay(frame, spellID, texturePath, position, scale, r, g, b, 
 
 	local width, height;
 	if(position == "CENTER") then
-		width, height = longSide, longSide;
+		width, height = lib.overlay.longSide, lib.overlay.longSide;
 		overlay:SetPoint("CENTER", frame, "CENTER", 0, 0);
 	elseif(position == "LEFT") then
-		width, height = shortSide, longSide;
+		width, height = lib.overlay.shortSide, lib.overlay.longSide;
 		overlay:SetPoint("RIGHT", frame, "LEFT", 0, 0);
 	elseif(position == "RIGHT") then
-		width, height = shortSide, longSide;
+		width, height = lib.overlay.shortSide, lib.overlay.longSide;
 		overlay:SetPoint("LEFT", frame, "RIGHT", 0, 0);
 	elseif(position == "TOP") then
-		width, height = longSide, shortSide;
+		width, height = lib.overlay.longSide, lib.overlay.shortSide;
 		overlay:SetPoint("BOTTOM", frame, "TOP");
 	elseif(position == "BOTTOM") then
-		width, height = longSide, shortSide;
+		width, height = lib.overlay.longSide, lib.overlay.shortSide;
 		overlay:SetPoint("TOP", frame, "BOTTOM");
 	elseif(position == "TOPRIGHT") then
-		width, height = shortSide, shortSide;
+		width, height = lib.overlay.shortSide, lib.overlay.shortSide;
 		overlay:SetPoint("BOTTOMLEFT", frame, "TOPRIGHT", 0, 0);
 	elseif(position == "TOPLEFT") then
-		width, height = shortSide, shortSide;
+		width, height = lib.overlay.shortSide, lib.overlay.shortSide;
 		overlay:SetPoint("BOTTOMRIGHT", frame, "TOPLEFT", 0, 0);
 	elseif(position == "BOTTOMRIGHT") then
-		width, height = shortSide, shortSide;
+		width, height = lib.overlay.shortSide, lib.overlay.shortSide;
 		overlay:SetPoint("TOPLEFT", frame, "BOTTOMRIGHT", 0, 0);
 	elseif(position == "BOTTOMLEFT") then
-		width, height = shortSide, shortSide;
+		width, height = lib.overlay.shortSide, lib.overlay.shortSide;
 		overlay:SetPoint("TOPRIGHT", frame, "BOTTOMLEFT", 0, 0);
 	else
 		return;
@@ -840,8 +812,8 @@ function lib:CreateOverlay(frame)
 
 	overlay.pulse = overlay:CreateAnimationGroup();
 	overlay.pulse:SetLooping("REPEAT");
-	CreateScaleAnim(overlay.pulse, nil, 1, 0.5, 1.08, 1.08, nil, nil, "IN_OUT");
-	CreateScaleAnim(overlay.pulse, nil, 2, 0.5, 0.9259, 0.9259, nil, nil, "IN_OUT");
+	CreateScaleAnim(overlay.pulse, nil, 1, 0.5, 1.08, 1.08, nil, "IN_OUT");
+	CreateScaleAnim(overlay.pulse, nil, 2, 0.5, 0.9259, 0.9259, nil, "IN_OUT");
 
 	overlay.texture = overlay:CreateTexture(nil, "ARTWORK");
 	overlay.texture:SetAllPoints();
@@ -852,33 +824,10 @@ function lib:CreateOverlay(frame)
 end
 
 -- 
-
-function lib.Init()
-	local unit = PlayerFrame.unit;
-	local name, _, _, count, _, _, _, _, _, _, spellID = UnitBuff(unit, 1);
-	if(name) then
-		local overlayMap = GetOverlayMap();
-		local overlayTable;
-		local j = 1;
-		repeat
-			local k = overlayMap[spellID];
-			if(k) then
-				if(not overlayTable) then
-					overlayTable = GetOverlayTable();
-				end
-
-				if(not (count < overlayTable[k])) then
-					buffs[spellID] = true;
-					BuffGained(spellID, k, overlayTable);
-				end
-			end
-			j = j + 1;
-			name, _, _, count, _, _, _, _, _, _, spellID = UnitBuff(unit, j);
-		until(not name);
-	end
+local function Init()
+	lib.eventFrame:SetScript("OnEvent", lib.OnEvent);
+	lib.eventFrame:RegisterEvent("UNIT_AURA");
+	lib.OnEvent(lib.eventFrame, "ForseUpdate", "player");
 end
 
-lib.Init();
-
-lib.eventFrame:SetScript("OnEvent", lib.OnEvent);
-lib.eventFrame:RegisterEvent("UNIT_AURA");
+Init();
