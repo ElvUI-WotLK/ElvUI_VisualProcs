@@ -3,17 +3,16 @@ local MAJOR_VERSION, MINOR_VERSION = "LibButtonGlow-1.0", 1;
 local lib, oldversion = LibStub:NewLibrary(MAJOR_VERSION, MINOR_VERSION);
 if(not lib) then return end -- No upgrade needed
 
-lib.disableActivationOverlay = false;
-
 -- Lua APIs
+local _G = _G;
 local pairs, next, tostring = pairs, next, tostring;
 local tinsert, tremove = table.insert, table.remove;
+local floor, ceil = math.floor, math.ceil;
 local band, lshift, rshift = bit.band, bit.lshift, bit.rshift;
 
 -- WoW APIs
 local CreateFrame = CreateFrame;
 local PlayerFrame = PlayerFrame;
-local GetActionInfo = GetActionInfo;
 local UnitBuff = UnitBuff;
 
 local CBH = LibStub("CallbackHandler-1.0");
@@ -56,6 +55,7 @@ local function AddOverlayGlow(spellId)
 	local overlayedCount = spellsOverlayed[spellId];
 	if(not overlayedCount) then
 		spellsOverlayed[spellId] = 1;
+
 		for frame, func in pairs(lib.overlayGlowShow) do
 			func(frame, spellId);
 		end
@@ -68,6 +68,7 @@ local function RemoveOverlayGlow(spellId)
 	local overlayedCount = spellsOverlayed[spellId];
 	if(overlayedCount == 1) then
 		spellsOverlayed[spellId] = nil;
+
 		for frame, func in pairs(lib.overlayGlowHide) do
 			func(frame, spellId);
 		end
@@ -149,6 +150,7 @@ local function BuffGained(spellID, k, overlayTable)
 		local r = rshift(lshift(vertexColor, 8), 24);
 		local g = rshift(lshift(vertexColor, 16), 24);
 		local b = band(vertexColor, 0xff);
+
 		for frame, func in pairs(lib.overlayShow) do
 			func(frame, spellID, texture, positions, scale, r, g, b);
 		end
@@ -175,7 +177,7 @@ local function BuffLost(spellID)
 	end
 end
 
-function lib.OnEvent(self, event, unitID)
+function lib.OnEvent(_, event, unitID)
 	local unit = PlayerFrame.unit;
 	if(unitID == unit) then
 		local name, _, _, count, _, _, _, _, _, _, spellID = UnitBuff(unit, 1);
@@ -326,7 +328,7 @@ local function InitScaleAnimation(self)
 		scaleY = 0;
 		self.scaleY = scaleY;
 	end
-	local left, bottom, width, height = target:GetRect();
+	local _, _, width, height = target:GetRect();
 	if(not width) then
 		return nil;
 	end
@@ -371,7 +373,7 @@ local function TidyScaleAnimation(self)
 	local target = self.target;
 	if(#self ~= 0) then
 		target:ClearAllPoints();
-		for i=1, #self, 5 do
+		for i = 1, #self, 5 do
 			target:SetPoint(self[i], self[i + 1], self[i + 2], self[i + 3], self[i + 4]);
 			self[i], self[i + 1], self[i + 2], self[i + 3], self[i + 4] = nil;
 		end
@@ -587,7 +589,7 @@ function lib:CreateOverlayGlow()
 	overlay.animOut.isPlaying = false;
 	overlay.animOut.IsPlaying = IsAnimPlaying;
 
-	lib.callbacks:Fire("OnOverlayCreated", overlay);
+	lib.callbacks:Fire("OnOverlayGlowCreated", overlay);
 
 	return overlay;
 end
@@ -746,11 +748,11 @@ function lib:GetOverlay(frame, spellID, position)
 			lib.overlay.inUse[spellID] = {overlay};
 		end
 	end
-	
+
 	return overlay;
 end
 
-function lib:HideOverlays(frame, spellID)
+function lib:HideOverlays(spellID)
 	local overlayList = lib.overlay.inUse[spellID];
 	if(overlayList) then
 		for i = 1, #overlayList do
@@ -761,9 +763,9 @@ function lib:HideOverlays(frame, spellID)
 	end
 end
 
-function lib:HideAllOverlays(frame)
+function lib:HideAllOverlays()
 	for spellID, overlayList in pairs(lib.overlay.inUse) do
-		lib:HideOverlays(frame, spellID);
+		lib:HideOverlays(spellID);
 	end
 end
 
@@ -820,10 +822,12 @@ function lib:CreateOverlay(frame)
 	overlay:SetScript("OnShow", Texture_OnShow);
 	overlay:SetScript("OnHide", nil);
 
+	lib.callbacks:Fire("OnOverlayCreated", overlay);
+
 	return overlay;
 end
 
--- 
+--
 local function Init()
 	lib.eventFrame:SetScript("OnEvent", lib.OnEvent);
 	lib.eventFrame:RegisterEvent("UNIT_AURA");

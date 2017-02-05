@@ -27,7 +27,8 @@ local function GetOptions()
 		name = L["Overlay Frame Scale"],
 		min = 0.1, max = 2, step = 0.01,
 		get = function(info) return E.db.cheese.overlay.scale; end,
-		set = function(info, value) E.db.cheese.overlay.scale = value; addon:UpdateOverlay(); end
+		set = function(info, value) E.db.cheese.overlay.scale = value; addon:UpdateOverlay(); end,
+		disabled = function() return not E.db.cheese.overlay.enable; end
 	};
 	E.Options.args.general.args.general.args.overlayGlow = {
 		order = 102,
@@ -95,7 +96,7 @@ local function OnButtonContentsChanged(_, button, state, value)
 	end
 end
 
-local function OnButtonUpdate(event, button)
+local function OnButtonUpdate(_, button)
 	UpdateOverlayGlow(button);
 end
 
@@ -111,9 +112,9 @@ end
 
 local function OverlayHide(self, spellID)
 	if(spellID) then
-		LBG:HideOverlays(self, spellID);
+		LBG:HideOverlays(spellID);
 	else
-		LBG:HideAllOverlays(self);
+		LBG:HideAllOverlays();
 	end
 end
 
@@ -133,7 +134,7 @@ end
 
 function addon:Initialize()
 	self:UpdateOverlay();
-
+	
 	EP:RegisterPlugin(addOnName, GetOptions);
 end
 
