@@ -653,8 +653,8 @@ function GetOverlayTable()
 			0, "SUDDEN_DEATH.BLP", "Left + Right (Flipped)", 1, 0xFFFFFFFF;
 			5, "MAELSTROM_WEAPON.BLP", "Top", 1, 0xFFFFFFFF;
 			1, "HOT_STREAK.BLP", "Left + Right (Flipped)", 1, 0xFFFFFFFF;
-			0, "BRAIN_FREEZE.BLP", "Left + Right (Flipped)", 1, 0xFFFFFFFF;
-			1, "FROZEN_FINGERS.BLP", "Top", 1, 0xFFFFFFFF;
+			0, "BRAIN_FREEZE.BLP", "Top", 1, 0xFFFFFFFF;
+			1, "FROZEN_FINGERS.BLP", "Left + Right (Flipped)", 1, 0xFFFFFFFF;
 			0, "RIME.BLP", "Top", 1, 0xFFFFFFFF;
 			0, "MASTER_MARKSMAN.BLP", "Top", 1, 0xFFFFFFFF;
 			0, "LOCK_AND_LOAD.BLP", "Top", 1, 0xFFFFFFFF;
