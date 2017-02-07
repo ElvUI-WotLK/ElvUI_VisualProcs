@@ -6,7 +6,7 @@ local addon = E:NewModule("Cheese");
 P.cheese = {
 	overlay = {
 		enable = true,
-		scale = 0.3,
+		scale = 0.8,
 	},
 	overlayGlow = {
 		enable = true,
