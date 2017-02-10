@@ -62,11 +62,17 @@ local function OverlayGlowHide(self, spellID)
 end
 
 local function UpdateOverlayGlow(self)
+	local spellID = self:GetSpellId()
+
 	if (self:HasAction()) then
 		if (not self.eventsRegistered) then
 			LBP:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW", self, OverlayGlowShow)
 			LBP:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE", self, OverlayGlowHide)
 			self.eventsRegistered = true
+		end
+
+		if (spellID) then
+			LBP:ChangeAction(self._state_action, spellID);
 		end
 	else
 		if (self.eventsRegistered) then
@@ -76,28 +82,10 @@ local function UpdateOverlayGlow(self)
 		end
 	end
 
-	local spellID = self:GetSpellId()
 	if (spellID and LBP:IsSpellOverlayed(spellID)) then
 		LBP:ShowOverlayGlow(self)
 	else
 		LBP:HideOverlayGlow(self)
-	end
-end
-
-local function OnButtonCreated(self)
-	local spellID = self:GetSpellId()
-	if (spellID) then
-		LBP:SetAction(self:GetAction(), spellID)
-	end
-	self:SetScript("OnUpdate", nil)
-end
-
-local function OnButtonContentsChanged(_, button, state, value)
-	if (state == "action") then
-		local spellID = button:GetSpellId()
-		if (spellID) then
-			LBP:ChangeAction(value, spellID)
-		end
 	end
 end
 
@@ -119,17 +107,11 @@ function VP:ToggleButtonGlow()
 	LBP.disableButtonGlow = not (E.private.actionbar.enable and E.db.visualProcs.buttonGlow.enable)
 
 	if (E.private.actionbar.enable and E.db.visualProcs.buttonGlow.enable) then
-		LAB.RegisterCallback(LBP, "OnButtonContentsChanged", OnButtonContentsChanged)
 		LAB.RegisterCallback(LBP, "OnButtonUpdate", function(_, button)
 			UpdateOverlayGlow(button)
 		end)
-		LAB.RegisterCallback(LBP, "OnButtonCreated", function(_, button)
-			button:SetScript("OnUpdate", OnButtonCreated)
-		end)
 	else
-		LAB.UnregisterCallback(LBP, "OnButtonContentsChanged")
 		LAB.UnregisterCallback(LBP, "OnButtonUpdate")
-		LAB.UnregisterCallback(LBP, "OnButtonCreated")
 
 		LBP:DisableButtonGlows()
 	end
