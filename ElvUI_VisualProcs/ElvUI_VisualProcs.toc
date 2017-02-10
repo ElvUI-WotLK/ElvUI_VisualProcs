@@ -1,7 +1,7 @@
 ﻿## Interface: 30300
 ## Author: Bunny, Pinya, brotalnia
 ## Version: 1.00
-## Title: |cffA11313E|r|cffC4C4C4lvUI|r |cffA11313V|rcffC4C4C4lvisual|r |cffA11313P|rcffC4C4C4lrocs|r
+## Title: |cffA11313E|r|cffC4C4C4lvUI|r |cffA11313V|r|cffC4C4C4isual|r |cffA11313P|r|cffC4C4C4rocs|r
 ## Notes: Cataclysm Visual Procs
 ## RequiredDeps: ElvUI
 
