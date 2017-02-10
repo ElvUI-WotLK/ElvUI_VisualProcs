@@ -1,7 +1,8 @@
 ﻿## Interface: 30300
-## Title: |cffA11313E|r|cffC4C4C4lvUI|r |cffA11313V|rcffC4C4C4lvisual|r |cffA11313P|rcffC4C4C4lrocs|r
+## Author: Bunny, Pinya, brotalnia
 ## Version: 1.00
-## Notes: Cataclysm Visual Alerts
+## Title: |cffA11313E|r|cffC4C4C4lvUI|r |cffA11313V|rcffC4C4C4lvisual|r |cffA11313P|rcffC4C4C4lrocs|r
+## Notes: Cataclysm Visual Procs
 ## RequiredDeps: ElvUI
 
 LibBlizzardProcs\LibBlizzardProcs.xml

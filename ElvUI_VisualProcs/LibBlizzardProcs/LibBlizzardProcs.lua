@@ -1,14 +1,18 @@
-local MAJOR_VERSION, MINOR_VERSION = "LibButtonGlow-1.0", 1;
+local MAJOR_VERSION = "LibBlizzardProcs-1.0";
+local MINOR_VERSION = 1;
 
-local lib, oldversion = LibStub:NewLibrary(MAJOR_VERSION, MINOR_VERSION);
-if(not lib) then return end -- No upgrade needed
+if not LibStub then error(MAJOR_VERSION .. " requires LibStub.") end
+local lib, oldversion = LibStub:NewLibrary(MAJOR_VERSION, MINOR_VERSION)
+if not lib then return end
+
+if not LBP_Data then error(MAJOR_VERSION .. " requires LBP_Data.") end
 
 -- Lua APIs
 local _G = _G;
-local pairs, next, tostring = pairs, next, tostring;
-local tinsert, tremove = table.insert, table.remove;
+local pairs, next = pairs, next;
+local upper = string.upper;
 local floor, ceil = math.floor, math.ceil;
-local band, lshift, rshift = bit.band, bit.lshift, bit.rshift;
+local tinsert, tremove, twipe = table.insert, table.remove, table.wipe;
 
 -- WoW APIs
 local CreateFrame = CreateFrame;
@@ -17,23 +21,13 @@ local UnitBuff = UnitBuff;
 
 local CBH = LibStub("CallbackHandler-1.0");
 
-lib.eventFrame = lib.eventFrame or CreateFrame("Frame");
+lib.eventFrame = lib.eventFrame or CreateFrame("Frame")
+lib.eventFrame:UnregisterAllEvents()
 
-lib.callbacks = lib.callbacks or CBH:New(lib);
-
-lib.mediaPath = lib.mediaPath or "Interface\\AddOns\\ElvUI_Cheese\\Textures\\";
-
-lib.overlayShow = {};
-lib.overlayHide = {};
-lib.overlayGlowShow = {};
-lib.overlayGlowHide = {};
-
-lib.event = {
-	["SPELL_ACTIVATION_OVERLAY_SHOW"] = lib.overlayShow,
-	["SPELL_ACTIVATION_OVERLAY_HIDE"] = lib.overlayHide,
-	["SPELL_ACTIVATION_OVERLAY_GLOW_SHOW"] = lib.overlayGlowShow,
-	["SPELL_ACTIVATION_OVERLAY_GLOW_HIDE"] = lib.overlayGlowHide,
-};
+lib.overlayShow = lib.overlayShow or {};
+lib.overlayHide = lib.overlayHide or {};
+lib.overlayGlowShow = lib.overlayGlowShow or {};
+lib.overlayGlowHide = lib.overlayGlowHide or {};
 
 -- Overlay
 lib.overlay = lib.overlay or {};
@@ -45,178 +39,257 @@ lib.overlayGlow = lib.overlayGlow or {};
 lib.overlayGlow.unused = lib.overlayGlow.unused or {};
 lib.overlayGlow.num = lib.overlayGlow.num or 0;
 
-local actionButtons = {};
+lib.event = {
+	["SPELL_ACTIVATION_OVERLAY_SHOW"] = lib.overlayShow,
+	["SPELL_ACTIVATION_OVERLAY_HIDE"] = lib.overlayHide,
+	["SPELL_ACTIVATION_OVERLAY_GLOW_SHOW"] = lib.overlayGlowShow,
+	["SPELL_ACTIVATION_OVERLAY_GLOW_HIDE"] = lib.overlayGlowHide,
+};
 
-local buffGlowSpells = {};
+lib.callbacks = lib.callbacks or CBH:New(lib);
+
+lib.playerClass = lib.playerClass or select(2, UnitClass("player"));
+lib.isClassSupported = lib.isClassSupported or lib.playerClass and (#LBP_Data.ButtonProcs[lib.playerClass] > 0 or #LBP_Data.OverlayProcs[lib.playerClass] > 0)
+
+lib.mediaPath = lib.mediaPath or "Interface\\AddOns\\LibBlizzardProcs\\textures\\";
+
+lib.disableOverlay = lib.disableOverlay or false;
+lib.disableButtonGlow = lib.disableButtonGlow or false;
+
+local actionButtons = {};
 local buffs = {};
+local buffGlowSpells = {};
 local spellsOverlayed = {};
 
-local function AddOverlayGlow(spellId)
-	local overlayedCount = spellsOverlayed[spellId];
+local function AddOverlayGlow(spellID)
+	local overlayedCount = spellsOverlayed[spellID];
 	if(not overlayedCount) then
-		spellsOverlayed[spellId] = 1;
-
+		spellsOverlayed[spellID] = 1;
 		for frame, func in pairs(lib.overlayGlowShow) do
-			func(frame, spellId);
+			func(frame, spellID);
 		end
 	else
-		spellsOverlayed[spellId] = overlayedCount + 1;
+		spellsOverlayed[spellID] = overlayedCount + 1;
 	end
 end
 
-local function RemoveOverlayGlow(spellId)
-	local overlayedCount = spellsOverlayed[spellId];
-	if(overlayedCount == 1) then
-		spellsOverlayed[spellId] = nil;
-
-		for frame, func in pairs(lib.overlayGlowHide) do
-			func(frame, spellId);
+local function RemoveOverlayGlow(spellID)
+	local overlayedCount = spellsOverlayed[spellID];
+	if overlayedCount then
+		if(overlayedCount == 1) then
+			spellsOverlayed[spellID] = nil;
+			for frame, func in pairs(lib.overlayGlowHide) do
+				func(frame, spellID);
+			end
+		else
+			spellsOverlayed[spellID] = overlayedCount - 1;
 		end
-	else
-		spellsOverlayed[spellId] = overlayedCount - 1;
 	end
 end
 
-function lib:SetAction(action, globalID)
-	actionButtons[action] = globalID;
-	if(globalID) then
-		local glowSpellK = GetOverlayGlowSpellMap()[globalID];
-		if(glowSpellK) then
-			local overlayGlowSpellTable = GetOverlayGlowSpellTable();
-			local spellID = overlayGlowSpellTable[glowSpellK];
-			repeat
-				local glowSpells = buffGlowSpells[spellID];
-				if(not glowSpells) then
-					buffGlowSpells[spellID] = {
-						[globalID] = 1;
-					};
-					if(buffs[spellID]) then
-						AddOverlayGlow(globalID);
+function lib:SetAction(action, spellID)
+	actionButtons[action] = spellID;
+
+	if spellID then
+		local procIdx = LBP_Data.ButtonSpells[lib.playerClass][spellID];
+		if procIdx then
+			local procData = LBP_Data.ButtonProcs[lib.playerClass][procIdx];
+
+			for _, procID in pairs(procData) do
+				local glowSpells = buffGlowSpells[procID];
+
+				if not glowSpells then
+					buffGlowSpells[procID] = {
+						[spellID] = 1
+					}
+
+					if buffs[procID] then
+						AddOverlayGlow(spellID);
 					end
 				else
-					local refCount = glowSpells[globalID];
-					if(not refCount) then
-						glowSpells[globalID] = 1;
-						if(buffs[spellID]) then
-							AddOverlayGlow(globalID);
+					local refCount = glowSpells[spellID];
+
+					if not refCount then
+						glowSpells[spellID] = 1
+
+						if buffs[procID] then
+							AddOverlayGlow(spellID);
 						end
 					else
-						glowSpells[globalID] = refCount + 1;
+						glowSpells[spellID] = refCount + 1;
 					end
 				end
-				glowSpellK = glowSpellK + 1;
-				spellID = overlayGlowSpellTable[glowSpellK];
-			until(not spellID);
-		end
-	end
-end
-
-function lib:ChangeAction(action, newGlobalID)
-	local globalID = actionButtons[action];
-	if(globalID) then
-		local glowSpellK = GetOverlayGlowSpellMap()[globalID];
-		if(glowSpellK) then
-			local overlayGlowSpellTable = GetOverlayGlowSpellTable();
-			local spellID = overlayGlowSpellTable[glowSpellK];
-			repeat
-				local glowSpells = buffGlowSpells[spellID];
-				local refCount = glowSpells[globalID];
-				if(refCount == 1) then
-					glowSpells[globalID] = nil;
-					if(next(glowSpells) == nil) then
-						glowSpells = nil;
-						buffGlowSpells[spellID] = nil;
-					end
-					if(buffs[spellID]) then
-						RemoveOverlayGlow(globalID);
-					end
-				else
-					glowSpells[globalID] = refCount - 1;
-				end
-				glowSpellK = glowSpellK + 1;
-				spellID = overlayGlowSpellTable[glowSpellK];
-			until(not spellID);
-		end
-	end
-	lib:SetAction(action, newGlobalID);
-end
-
-local function BuffGained(spellID, k, overlayTable)
-	if(k < OVERLAYS_UPPER_BOUND) then
-		local texture = lib.mediaPath .. overlayTable[k + 1];
-		local positions = overlayTable[k + 2];
-		local scale = overlayTable[k + 3];
-		local vertexColor = overlayTable[k + 4];
-		local r = rshift(lshift(vertexColor, 8), 24);
-		local g = rshift(lshift(vertexColor, 16), 24);
-		local b = band(vertexColor, 0xff);
-
-		for frame, func in pairs(lib.overlayShow) do
-			func(frame, spellID, texture, positions, scale, r, g, b);
-		end
-	end
-
-	local glowSpells = buffGlowSpells[spellID];
-	if(glowSpells) then
-		for globalID in pairs(glowSpells) do
-			AddOverlayGlow(globalID);
-		end
-	end
-end
-
-local function BuffLost(spellID)
-	for frame, func in pairs(lib.overlayHide) do
-		func(frame, spellID);
-	end
-
-	local glowSpells = buffGlowSpells[spellID];
-	if(glowSpells) then
-		for globalID in pairs(glowSpells) do
-			RemoveOverlayGlow(globalID);
-		end
-	end
-end
-
-function lib.OnEvent(_, event, unitID)
-	local unit = PlayerFrame.unit;
-	if(unitID == unit) then
-		local name, _, _, count, _, _, _, _, _, _, spellID = UnitBuff(unit, 1);
-		if(name) then
-			local overlayMap = GetOverlayMap();
-			local overlayTable;
-			local j = 1;
-			repeat
-				local k = overlayMap[spellID];
-				if(k) then
-					if(not overlayTable) then
-						overlayTable = GetOverlayTable();
-					end
-					if(not (count < overlayTable[k])) then
-						local hasBuff = buffs[spellID];
-						buffs[spellID] = false;
-						if(hasBuff == nil) then
-							BuffGained(spellID, k, overlayTable);
-						end
-					end
-				end
-				j = j + 1;
-				name, _, _, count, _, _, _, _, _, _, spellID = UnitBuff(unit, j);
-			until(not name);
-		end
-
-		for spellID, hasBuff in pairs(buffs) do
-			if(not hasBuff) then
-				buffs[spellID] = true;
-			else
-				buffs[spellID] = nil;
-				BuffLost(spellID);
 			end
 		end
 	end
 end
 
-function lib:IsSpellOverlayed(spellID)
-	return spellsOverlayed[spellID] and true or false;
+function lib:ChangeAction(action, newSpellID)
+	local spellID = actionButtons[action];
+	if spellID == newSpellID then return end
+
+	if spellID then
+		local procIdx = LBP_Data.ButtonSpells[lib.playerClass][spellID];
+		if procIdx then
+			local procData = LBP_Data.ButtonProcs[lib.playerClass][procIdx];
+
+			for _, procID in pairs(procData) do
+				local glowSpells = buffGlowSpells[procID];
+				local refCount = glowSpells[spellID];
+
+				if (refCount == 1) then
+					glowSpells[spellID] = nil;
+
+					if (next(glowSpells) == nil) then
+						glowSpells = nil;
+						buffGlowSpells[procID] = nil;
+					end
+					if (buffs[procID]) then
+						RemoveOverlayGlow(spellID);
+					end
+				else
+					glowSpells[spellID] = refCount - 1;
+				end
+			end
+		end
+	end
+
+	lib:SetAction(action, newSpellID);
+end
+
+function lib:DisableButtonGlows()
+	for spellID, hasBuff in pairs(buffs) do
+		if hasBuff then
+			local glowSpells = buffGlowSpells[spellID];
+			if(glowSpells) then
+				for globalID in pairs(glowSpells) do
+					RemoveOverlayGlow(globalID);
+				end
+			end
+		end
+	end
+end
+
+local function BuffGained(spellID, textureData)
+	if not lib.disableOverlay then
+		if textureData then
+			local texture = lib.mediaPath .. "overlay\\" .. textureData[2]
+			local positions = textureData[3]
+			local scale = textureData[4]
+			local r, g, b = textureData[5], textureData[6], textureData[7]
+
+			for frame, func in pairs(lib.overlayShow) do
+				func(frame, spellID, texture, positions, scale, r, g, b);
+			end
+		end
+	end
+
+	if not lib.disableButtonGlow then
+		local glowSpells = buffGlowSpells[spellID];
+		if(glowSpells) then
+			for globalID in pairs(glowSpells) do
+				AddOverlayGlow(globalID);
+			end
+		end
+	end
+end
+
+local function BuffLost(spellID)
+	if not lib.disableOverlay then
+		for frame, func in pairs(lib.overlayHide) do
+			func(frame, spellID);
+		end
+	end
+
+	if not lib.disableButtonGlow then
+		local glowSpells = buffGlowSpells[spellID];
+		if(glowSpells) then
+			for globalID in pairs(glowSpells) do
+				RemoveOverlayGlow(globalID);
+			end
+		end
+	end
+end
+
+local function OnEvent(_, event, unit, ...)
+	if event == "UNIT_AURA" then
+		local playerUnit = PlayerFrame.unit;
+
+		if(unit == playerUnit) then
+			local overlayProcList = LBP_Data.OverlayProcs[lib.playerClass]
+
+			local overlayTextures;
+			local name, _, _, count, _, _, _, _, _, _, spellID
+
+			for i = 1, 40 do
+				name, _, _, count, _, _, _, _, _, _, spellID = UnitBuff(unit, i);
+
+				if not name then break end
+
+				local textureIndx = overlayProcList[spellID];
+				if (textureIndx) then
+					if (not overlayTextures) then
+						overlayTextures = LBP_Data.OverlayTextures[lib.playerClass];
+					end
+
+					if (overlayTextures[textureIndx][1] <= count) then
+						local hasBuff = buffs[spellID];
+						buffs[spellID] = false;
+
+						if (hasBuff == nil) then
+							BuffGained(spellID, overlayTextures[textureIndx]);
+						end
+					end
+				else
+					local hasBuff = buffs[spellID];
+					buffs[spellID] = false;
+
+					if (hasBuff == nil) then
+						BuffGained(spellID);
+					end
+				end
+			end
+
+			for spellID, hasBuff in pairs(buffs) do
+				if (not hasBuff) then
+					buffs[spellID] = true;
+				else
+					buffs[spellID] = nil;
+					BuffLost(spellID);
+				end
+			end
+		end
+	elseif event == "PLAYER_ENTERING_WORLD" then
+		local unit = PlayerFrame.unit;
+
+		local overlayProcList = LBP_Data.OverlayProcs[lib.playerClass]
+
+		local overlayTextures;
+		local name, _, _, count, _, _, _, _, _, _, spellID
+
+		for i = 1, 40 do
+			name, _, _, count, _, _, _, _, _, _, spellID = UnitBuff(unit, i);
+
+			if not name then break end
+
+			local textureIndx = overlayProcList[spellID];
+			if (textureIndx) then
+				if (not overlayTextures) then
+					overlayTextures = LBP_Data.OverlayTextures[lib.playerClass];
+				end
+
+				if (overlayTextures[textureIndx][1] <= count) then
+					buffs[spellID] = true;
+					BuffGained(spellID, overlayTextures[textureIndx]);
+				end
+			else
+				buffs[spellID] = true;
+				BuffGained(spellID);
+			end
+		end
+
+		lib.eventFrame:UnregisterEvent("PLAYER_ENTERING_WORLD");
+	end
 end
 
 function lib:RegisterEvent(event, frame, func)
@@ -241,6 +314,10 @@ function lib:IsEventRegistered(event, frame)
 	return false;
 end
 
+function lib:IsSpellOverlayed(spellID)
+	return spellsOverlayed[spellID] and true or false;
+end
+
 -- Animation Functions
 local function InitAlphaAnimation(self)
 	local target = self.target;
@@ -248,11 +325,13 @@ local function InitAlphaAnimation(self)
 		target = self:GetRegionParent();
 		self.target = target;
 	end
+
 	local change = self.change;
 	if(not change) then
 		change = 0;
 		self.change = change;
 	end
+
 	local frameAlpha = target:GetAlpha();
 	self.frameAlpha = frameAlpha;
 	self.alphaFactor = frameAlpha + change - frameAlpha;
@@ -270,6 +349,7 @@ local function AlphaAnimation_OnUpdate(self, elapsed)
 			InitAlphaAnimation(self);
 			self.played = 1;
 		end
+
 		local frameAlpha = self.frameAlpha;
 		if(frameAlpha) then
 			self.target:SetAlpha(frameAlpha + self.alphaFactor * progress);
@@ -291,12 +371,15 @@ local AlphaAnimation_OnFinished = AlphaAnimation_OnStop;
 
 local function CreateAlphaAnim(group, target, order, duration, change, delay, onPlay, onFinished)
 	local alpha = group:CreateAnimation();
+
 	if(target) then
 		alpha.target = _G[alpha:GetRegionParent():GetName() .. target];
 	end
+
 	if(order) then
 		alpha:SetOrder(order);
 	end
+
 	alpha:SetDuration(duration);
 	alpha.change = change;
 
@@ -307,6 +390,7 @@ local function CreateAlphaAnim(group, target, order, duration, change, delay, on
 	if(onPlay) then
 		alpha:SetScript("OnPlay", onPlay);
 	end
+
 	alpha:SetScript("OnUpdate", AlphaAnimation_OnUpdate);
 	alpha:SetScript("OnStop", AlphaAnimation_OnStop);
 	alpha:SetScript("OnFinished", onFinished or AlphaAnimation_OnFinished);
@@ -318,25 +402,31 @@ local function InitScaleAnimation(self)
 		target = self:GetRegionParent();
 		self.target = target;
 	end
+
 	local scaleX = self.scaleX;
 	if(not scaleX) then
 		scaleX = 0;
 		self.scaleX = scaleX;
 	end
+
 	local scaleY = self.scaleY;
 	if(not scaleY) then
 		scaleY = 0;
 		self.scaleY = scaleY;
 	end
+
 	local _, _, width, height = target:GetRect();
 	if(not width) then
 		return nil;
 	end
+
 	self.frameWidth, self.frameHeight = width, height;
 	self.widthFactor, self.heightFactor = width * scaleX - width, height * scaleY - height;
+
 	local parent = target:GetParent();
 	local setCenter;
 	local numPoints = target:GetNumPoints();
+
 	if(1 <= numPoints) then
 		local point, relativeTo, relativePoint, xOffset, yOffset = target:GetPoint(1);
 		if(numPoints == 1 and point == "CENTER") then
@@ -348,6 +438,7 @@ local function InitScaleAnimation(self)
 					local k = #self + 1;
 					self[k], self[k + 1], self[k + 2], self[k + 3], self[k + 4] = point, relativeTo, relativePoint, xOffset, yOffset;
 				end
+
 				i = i + 1;
 				if(i <= numPoints) then
 					point, relativeTo, relativePoint, xOffset, yOffset = target:GetPoint(i);
@@ -361,23 +452,28 @@ local function InitScaleAnimation(self)
 	else
 		setCenter = true;
 	end
+
 	if(setCenter) then
 		local x, y = target:GetCenter();
 		local parentX, parentY = parent:GetCenter();
 		target:SetPoint("CENTER", x - parentX, y - parentY);
 	end
+
 	return 1;
 end
 
 local function TidyScaleAnimation(self)
 	local target = self.target;
+
 	if(#self ~= 0) then
 		target:ClearAllPoints();
+
 		for i = 1, #self, 5 do
 			target:SetPoint(self[i], self[i + 1], self[i + 2], self[i + 3], self[i + 4]);
 			self[i], self[i + 1], self[i + 2], self[i + 3], self[i + 4] = nil;
 		end
 	end
+
 	self.widthFactor, self.heightFactor = nil;
 	self.frameWidth, self.frameHeight = nil;
 end
@@ -390,9 +486,11 @@ local function ScaleAnimation_OnUpdate(self, elapsed)
 				self.played = 1;
 			end
 		end
+
 		local frameWidth = self.frameWidth;
 		if(frameWidth) then
 			self.target:SetSize(frameWidth + self.widthFactor * progress, self.frameHeight + self.heightFactor * progress);
+
 			if(progress == 1) then
 				TidyScaleAnimation(self);
 			end
@@ -414,6 +512,7 @@ local function CreateScaleAnim(group, target, order, duration, x, y, delay, smoo
 	if(target) then
 		scale.target = _G[scale:GetRegionParent():GetName() .. target];
 	end
+
 	scale:SetOrder(order);
 	scale:SetDuration(duration);
 	scale.scaleX, scale.scaleY = x, y;
@@ -429,6 +528,7 @@ local function CreateScaleAnim(group, target, order, duration, x, y, delay, smoo
 	if(onPlay) then
 		scale:SetScript("OnPlay", onPlay);
 	end
+
 	scale:SetScript("OnUpdate", ScaleAnimation_OnUpdate);
 	scale:SetScript("OnStop", ScaleAnimation_OnStop);
 	scale:SetScript("OnFinished", ScaleAnimation_OnFinished);
@@ -443,14 +543,18 @@ local function AnimateTexCoords(texture, textureWidth, textureHeight, frameWidth
 		texture.columnWidth = frameWidth / textureWidth;
 		texture.rowHeight = frameHeight / textureHeight;
 	end
+
 	local frame = texture.frame;
+
 	if(not texture.throttle or texture.throttle > throttle) then
 		local framesToAdvance = floor(texture.throttle / throttle);
 		while(frame + framesToAdvance > numFrames) do
 			frame = frame - numFrames;
 		end
+
 		frame = frame + framesToAdvance;
 		texture.throttle = 0;
+
 		local left = mod(frame - 1, texture.numColumns) * texture.columnWidth;
 		local right = left + texture.columnWidth;
 		local bottom = ceil(frame / texture.numColumns) * texture.rowHeight;
@@ -481,6 +585,16 @@ end
 
 local function OverlayGlow_OnUpdate(self, elapsed)
 	AnimateTexCoords(self.ants, 256, 256, 48, 48, 22, elapsed, 0.01);
+--[[
+	local cooldown = self:GetParent().cooldown;
+	-- we need some threshold to avoid dimming the glow during the gdc
+	-- (using 1500 exactly seems risky, what if casting speed is slowed or something?)
+	if(cooldown and cooldown:IsShown() and cooldown:GetCooldownDuration() > 3000) then
+		self:SetAlpha(0.5);
+	else
+		self:SetAlpha(1.0);
+	end
+--]]
 end
 
 local function AnimIn_OnPlay(self)
@@ -519,7 +633,7 @@ end
 function lib:CreateOverlayGlow()
 	lib.overlayGlow.num = lib.overlayGlow.num + 1;
 
-	local name = "ButtonGlowOverlay" .. tostring(lib.overlayGlow.num);
+	local name = "ButtonGlowOverlay" .. lib.overlayGlow.num;
 	local overlay = CreateFrame("Frame", name, UIParent);
 
 	overlay.spark = overlay:CreateTexture(name .. "Spark", "BACKGROUND");
@@ -567,7 +681,7 @@ function lib:CreateOverlayGlow()
 	CreateAlphaAnim(overlay.animIn, "InnerGlowOver", 1, 0.3, -1);
 	CreateScaleAnim(overlay.animIn, "OuterGlow", 1, 0.3, 0.5, 0.5);
 	CreateScaleAnim(overlay.animIn, "OuterGlowOver", 1, 0.3, 0.5, 0.5);
-	CreateAlphaAnim(overlay.animIn, "OuterGlowOver",  1, 0.3, -1)
+	CreateAlphaAnim(overlay.animIn, "OuterGlowOver", 1, 0.3, -1)
 	CreateScaleAnim(overlay.animIn, "Spark", 1, 0.2, 0.666666, 0.666666, 0.2);
 	CreateAlphaAnim(overlay.animIn, "Spark", 1, 0.2, -1, 0.2);
 	CreateAlphaAnim(overlay.animIn, "InnerGlow", 1, 0.2, -1, 0.3);
@@ -627,6 +741,7 @@ function lib:HideOverlayGlow(frame)
 		if(frame.__LBGoverlay.animIn:IsPlaying()) then
 			frame.__LBGoverlay.animIn:Stop();
 		end
+
 		if(frame:IsVisible()) then
 			frame.__LBGoverlay.animOut:Play();
 		else
@@ -639,10 +754,6 @@ end
 lib.overlay.sizeScale = lib.overlay.sizeScale or 0.8;
 lib.overlay.longSide = 256 * lib.overlay.sizeScale;
 lib.overlay.shortSide = 128 * lib.overlay.sizeScale;
-
-lib.overlayFrame = lib.overlayFrame or CreateFrame("Frame", nil, UIParent);
-lib.overlayFrame:SetSize(lib.overlay.longSide, lib.overlay.longSide);
-lib.overlayFrame:SetPoint("CENTER");
 
 local complexLocationTable = {
 	["RIGHT (FLIPPED)"] = {
@@ -662,7 +773,7 @@ local complexLocationTable = {
 };
 
 function lib:ShowAllOverlays(frame, spellID, texturePath, positions, scale, r, g, b)
-	positions = strupper(positions);
+	positions = upper(positions);
 	if(complexLocationTable[positions]) then
 		for location, info in pairs(complexLocationTable[positions]) do
 			lib:ShowOverlay(frame, spellID, texturePath, location, scale, r, g, b, info.vFlip, info.hFlip);
@@ -688,33 +799,35 @@ function lib:ShowOverlay(frame, spellID, texturePath, position, scale, r, g, b, 
 	end
 	overlay.texture:SetTexCoord(texLeft, texRight, texTop, texBottom);
 
+	local longSide, shortSide = lib.overlay.longSide, lib.overlay.shortSide
 	local width, height;
+
 	if(position == "CENTER") then
-		width, height = lib.overlay.longSide, lib.overlay.longSide;
+		width, height = longSide, longSide;
 		overlay:SetPoint("CENTER", frame, "CENTER", 0, 0);
 	elseif(position == "LEFT") then
-		width, height = lib.overlay.shortSide, lib.overlay.longSide;
+		width, height = shortSide, longSide;
 		overlay:SetPoint("RIGHT", frame, "LEFT", 0, 0);
 	elseif(position == "RIGHT") then
-		width, height = lib.overlay.shortSide, lib.overlay.longSide;
+		width, height = shortSide, longSide;
 		overlay:SetPoint("LEFT", frame, "RIGHT", 0, 0);
 	elseif(position == "TOP") then
-		width, height = lib.overlay.longSide, lib.overlay.shortSide;
+		width, height = longSide, shortSide;
 		overlay:SetPoint("BOTTOM", frame, "TOP");
 	elseif(position == "BOTTOM") then
-		width, height = lib.overlay.longSide, lib.overlay.shortSide;
+		width, height = longSide, shortSide;
 		overlay:SetPoint("TOP", frame, "BOTTOM");
 	elseif(position == "TOPRIGHT") then
-		width, height = lib.overlay.shortSide, lib.overlay.shortSide;
+		width, height = shortSide, shortSide;
 		overlay:SetPoint("BOTTOMLEFT", frame, "TOPRIGHT", 0, 0);
 	elseif(position == "TOPLEFT") then
-		width, height = lib.overlay.shortSide, lib.overlay.shortSide;
+		width, height = shortSide, shortSide;
 		overlay:SetPoint("BOTTOMRIGHT", frame, "TOPLEFT", 0, 0);
 	elseif(position == "BOTTOMRIGHT") then
-		width, height = lib.overlay.shortSide, lib.overlay.shortSide;
+		width, height = shortSide, shortSide;
 		overlay:SetPoint("TOPLEFT", frame, "BOTTOMRIGHT", 0, 0);
 	elseif(position == "BOTTOMLEFT") then
-		width, height = lib.overlay.shortSide, lib.overlay.shortSide;
+		width, height = shortSide, shortSide;
 		overlay:SetPoint("TOPRIGHT", frame, "BOTTOMLEFT", 0, 0);
 	else
 		return;
@@ -723,15 +836,17 @@ function lib:ShowOverlay(frame, spellID, texturePath, position, scale, r, g, b, 
 	overlay:SetSize(width * scale, height * scale);
 
 	overlay.texture:SetTexture(texturePath);
-	overlay.texture:SetVertexColor(r / 255, g / 255, b / 255);
+	overlay.texture:SetVertexColor(r, g, b);
 
 	overlay.animOut:Stop();
+	PlaySoundFile("Sound\\Spells\\ReputationLevelUp.wav", "SFX")
 	overlay:Show();
 end
 
 function lib:GetOverlay(frame, spellID, position)
 	local overlayList = lib.overlay.inUse[spellID];
 	local overlay;
+
 	if(overlayList) then
 		for i = 1, #overlayList do
 			if(overlayList[i].position == position) then
@@ -752,7 +867,7 @@ function lib:GetOverlay(frame, spellID, position)
 	return overlay;
 end
 
-function lib:HideOverlays(spellID)
+function lib:HideOverlays(frame, spellID)
 	local overlayList = lib.overlay.inUse[spellID];
 	if(overlayList) then
 		for i = 1, #overlayList do
@@ -763,9 +878,17 @@ function lib:HideOverlays(spellID)
 	end
 end
 
-function lib:HideAllOverlays()
+function lib:HideAllOverlays(frame)
 	for spellID, overlayList in pairs(lib.overlay.inUse) do
-		lib:HideOverlays(spellID);
+		lib:HideOverlays(frame, spellID);
+	end
+end
+
+function lib:DisableOverlays()
+	for spellID, data in pairs(lib.overlay.inUse) do
+		for _, frame in pairs(data) do
+			lib:HideAllOverlays(frame)
+		end
 	end
 end
 
@@ -827,11 +950,21 @@ function lib:CreateOverlay(frame)
 	return overlay;
 end
 
---
-local function Init()
-	lib.eventFrame:SetScript("OnEvent", lib.OnEvent);
-	lib.eventFrame:RegisterEvent("UNIT_AURA");
-	lib.OnEvent(lib.eventFrame, "ForseUpdate", "player");
+function lib:isEnabled()
+	return lib.eventFrame:GetScript("OnEvent") and true or false
 end
 
-Init();
+function lib:Enable()
+	if lib.isClassSupported and not lib:isEnabled() and not (lib.disableOverlay or lib.disableButtonGlow) then
+		lib.eventFrame:SetScript("OnEvent", OnEvent);
+
+		lib.eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD");
+		lib.eventFrame:RegisterEvent("UNIT_AURA");
+	end
+end
+
+function lib:Disable()
+	lib.eventFrame:SetScript("OnEvent", nil);
+	lib.eventFrame:UnregisterAllEvent();
+	twipe(buffs)
+end

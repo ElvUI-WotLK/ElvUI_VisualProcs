@@ -1,141 +1,197 @@
-﻿local addOnName = ...;
-local E, L, V, P, G = unpack(ElvUI);
-local EP = LibStub("LibElvUIPlugin-1.0");
-local addon = E:NewModule("Cheese");
+local E, L, V, P, G = unpack(ElvUI)
+local LBP = LibStub("LibBlizzardProcs-1.0", true)
+local LAB = LibStub("LibActionButton-1.0")
+local EP = LibStub("LibElvUIPlugin-1.0")
+local VP = E:NewModule("ElvUI_VisualProcs")
 
-P.cheese = {
+local AddOnName = ...
+
+P.visualProcs = {
 	overlay = {
 		enable = true,
 		scale = 0.8,
 	},
-	overlayGlow = {
+	buttonGlow = {
 		enable = true,
 	},
-};
+}
 
 local function GetOptions()
-	E.Options.args.general.args.general.args.overlay = {
-		order = 100,
-		type = "toggle",
-		name = L["Overlay Frame"],
-		get = function(info) return E.db.cheese.overlay.enable; end,
-		set = function(info, value) E.db.cheese.overlay.enable = value; addon:UpdateOverlay(); end
-	};
-	E.Options.args.general.args.general.args.overlayScale = {
-		order = 101,
-		type = "range",
-		name = L["Overlay Frame Scale"],
-		min = 0.1, max = 2, step = 0.01,
-		get = function(info) return E.db.cheese.overlay.scale; end,
-		set = function(info, value) E.db.cheese.overlay.scale = value; addon:UpdateOverlay(); end,
-		disabled = function() return not E.db.cheese.overlay.enable; end
-	};
-	E.Options.args.general.args.general.args.overlayGlow = {
-		order = 102,
-		type = "toggle",
-		name = L["Overlay Glow Frame"]
-	};
+	E.Options.args.PinyaProfiles = {
+		order = -20,
+		type = "group",
+		childGroups = "select",
+		name = "VisualProcs",
+		args = {
+			buttonGlow = {
+				order = 1,
+				type = "toggle",
+				name = L["Button Glow"],
+				get = function(info) return E.db.visualProcs.buttonGlow.enable end,
+				set = function(info, value)
+					E.db.visualProcs.buttonGlow.enable = value
+					VP:ToggleButtonGlow()
+				end,
+				disabled = function() return not LBP.isClassSupported end,
+			},
+			overlay = {
+				order = 2,
+				type = "toggle",
+				name = L["Overlay Frame"],
+				get = function(info) return E.db.visualProcs.overlay.enable end,
+				set = function(info, value)
+					E.db.visualProcs.overlay.enable = value
+					VP:ToggleOverlay()
+				end,
+				disabled = function() return not LBP.isClassSupported end,
+			}
+		}
+	}
 end
 
-local LAB = LibStub("LibActionButton-1.0");
-local LBG = LibStub("LibButtonGlow-1.0", true);
-
-local function OverlayGlowShow(self, arg1)
-	if(self:GetSpellId() == arg1) then
-		LBG:ShowOverlayGlow(self);
+local function OverlayGlowShow(self, spellID)
+	if (self:GetSpellId() == spellID) then
+		LBP:ShowOverlayGlow(self)
 	end
 end
 
-local function OverlayGlowHide(self, arg1)
-	if(self:GetSpellId() == arg1) then
-		LBG:HideOverlayGlow(self);
+local function OverlayGlowHide(self, spellID)
+	if (self:GetSpellId() == spellID) then
+		LBP:HideOverlayGlow(self)
 	end
 end
 
 local function UpdateOverlayGlow(self)
-	if(self:HasAction()) then
-		if(not self.eventsRegistered) then
-			LBG:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW", self, OverlayGlowShow);
-			LBG:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE", self, OverlayGlowHide);
-			self.eventsRegistered = true;
+	if (self:HasAction()) then
+		if (not self.eventsRegistered) then
+			LBP:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW", self, OverlayGlowShow)
+			LBP:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE", self, OverlayGlowHide)
+			self.eventsRegistered = true
 		end
 	else
-		if(self.eventsRegistered) then
-			LBG:UnregisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW", self);
-			LBG:UnregisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE", self);
-			self.eventsRegistered = nil;
+		if (self.eventsRegistered) then
+			LBP:UnregisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW", self)
+			LBP:UnregisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE", self)
+			self.eventsRegistered = nil
 		end
 	end
 
-	local spellId = self:GetSpellId();
-	if(spellId and LBG:IsSpellOverlayed(spellId)) then
-		LBG:ShowOverlayGlow(self);
+	local spellID = self:GetSpellId()
+	if (spellID and LBP:IsSpellOverlayed(spellID)) then
+		LBP:ShowOverlayGlow(self)
 	else
-		LBG:HideOverlayGlow(self);
+		LBP:HideOverlayGlow(self)
 	end
 end
 
-local function OnUpdate(self)
-	local spellId = self:GetSpellId();
-	if(spellId) then
-		LBG:SetAction(self:GetAction(), spellId);
+local function OnButtonCreated(self)
+	local spellID = self:GetSpellId()
+	if (spellID) then
+		LBP:SetAction(self:GetAction(), spellID)
 	end
-	self:SetScript("OnUpdate", nil);
-end
-
-local function OnButtonCreated(_, button)
-	button:SetScript("OnUpdate", OnUpdate);
+	self:SetScript("OnUpdate", nil)
 end
 
 local function OnButtonContentsChanged(_, button, state, value)
-	if(state == "action") then
-		local spellId = button:GetSpellId();
-		if(spellId) then
-			LBG:ChangeAction(value, spellId);
+	if (state == "action") then
+		local spellID = button:GetSpellId()
+		if (spellID) then
+			LBP:ChangeAction(value, spellID)
 		end
 	end
 end
 
-local function OnButtonUpdate(_, button)
-	UpdateOverlayGlow(button);
-end
-
--- Overlay Glow
-LAB.RegisterCallback(LBG, "OnButtonCreated", OnButtonCreated);
-LAB.RegisterCallback(LBG, "OnButtonContentsChanged", OnButtonContentsChanged);
-LAB.RegisterCallback(LBG, "OnButtonUpdate", OnButtonUpdate);
-
--- Overlay
 local function OverlayShow(self, spellID, texture, positions, scale, r, g, b)
-	LBG:ShowAllOverlays(self, spellID, texture, positions, scale, r, g, b);
+	LBP:ShowAllOverlays(self, spellID, texture, positions, scale, r, g, b)
 end
 
 local function OverlayHide(self, spellID)
-	if(spellID) then
-		LBG:HideOverlays(spellID);
+	if (spellID) then
+		LBP:HideOverlays(self, spellID)
 	else
-		LBG:HideAllOverlays();
+		LBP:HideAllOverlays(self)
 	end
 end
 
-function addon:UpdateOverlay()
-	if(E.db.cheese.overlay.enable) then
-		LBG.overlay.sizeScale = E.db.cheese.overlay.scale;
-		LBG.overlay.longSide = 256 * E.db.cheese.overlay.scale;
-		LBG.overlay.shortSide = 128 * E.db.cheese.overlay.scale;
+function VP:ToggleButtonGlow()
+	if not LBP.isClassSupported then return end
 
-		LBG:RegisterEvent("SPELL_ACTIVATION_OVERLAY_SHOW", LBG.overlayFrame, OverlayShow);
-		LBG:RegisterEvent("SPELL_ACTIVATION_OVERLAY_HIDE", LBG.overlayFrame, OverlayHide);
+	LBP.disableButtonGlow = not (E.private.actionbar.enable and E.db.visualProcs.buttonGlow.enable)
+
+	if (E.private.actionbar.enable and E.db.visualProcs.buttonGlow.enable) then
+		LAB.RegisterCallback(LBP, "OnButtonContentsChanged", OnButtonContentsChanged)
+		LAB.RegisterCallback(LBP, "OnButtonUpdate", function(_, button)
+			UpdateOverlayGlow(button)
+		end)
+		LAB.RegisterCallback(LBP, "OnButtonCreated", function(_, button)
+			button:SetScript("OnUpdate", OnButtonCreated)
+		end)
 	else
-		LBG:UnregisterEvent("SPELL_ACTIVATION_OVERLAY_SHOW", LBG.overlayFrame);
-		LBG:UnregisterEvent("SPELL_ACTIVATION_OVERLAY_HIDE", LBG.overlayFrame);
+		LAB.UnregisterCallback(LBP, "OnButtonContentsChanged")
+		LAB.UnregisterCallback(LBP, "OnButtonUpdate")
+		LAB.UnregisterCallback(LBP, "OnButtonCreated")
+
+		LBP:DisableButtonGlows()
+	end
+
+	self:UpdateState()
+end
+
+function VP:UpdateOverlay()
+	if not LBP.isClassSupported then return end
+
+	local scale = E.db.visualProcs.overlay.scale
+
+	LBP.overlay.sizeScale = scale
+	LBP.overlay.longSide = 256 * scale
+	LBP.overlay.shortSide = 128 * scale
+
+	self.overlayFrame:SetSize(256 * scale, 256 * scale)
+end
+
+function VP:ToggleOverlay()
+	if not LBP.isClassSupported then return end
+
+	LBP.disableOverlay = not E.db.visualProcs.overlay.enable
+
+	if (E.db.visualProcs.overlay.enable) then
+		LBP:RegisterEvent("SPELL_ACTIVATION_OVERLAY_SHOW", self.overlayFrame, OverlayShow)
+		LBP:RegisterEvent("SPELL_ACTIVATION_OVERLAY_HIDE", self.overlayFrame, OverlayHide)
+		self.overlayFrame:Show()
+	else
+		LBP:UnregisterEvent("SPELL_ACTIVATION_OVERLAY_SHOW", self.overlayFrame)
+		LBP:UnregisterEvent("SPELL_ACTIVATION_OVERLAY_HIDE", self.overlayFrame)
+
+		LBP:DisableOverlays()
+		self.overlayFrame:Hide()
+	end
+
+	self:UpdateState()
+end
+
+function VP:UpdateState()
+	if LBP.disableOverlay and LBP.disableButtonGlow then
+		if LBP:isEnabled() then
+			LBP:Disable()
+		end
+	else
+		if not LBP:isEnabled() then
+			LBP:Enable()
+		end
 	end
 end
 
-function addon:Initialize()
-	self:UpdateOverlay();
-	
-	EP:RegisterPlugin(addOnName, GetOptions);
+function VP:Initialize()
+	LBP.mediaPath = "Interface\\AddOns\\ElvUI_VisualProcs\\LibBlizzardProcs\\textures\\"
+
+	self.overlayFrame = CreateFrame("Frame", "ElvUI_VisualProcsOverlay", UIParent)
+	self.overlayFrame:Point("CENTER")
+
+	self:ToggleButtonGlow()
+	self:UpdateOverlay()
+	self:ToggleOverlay()
+
+	EP:RegisterPlugin(AddOnName, GetOptions)
 end
 
-E:RegisterModule(addon:GetName());
+E:RegisterModule(VP:GetName())
