@@ -1,4 +1,4 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/">
 	<Script file="Data.lua"/>
-	<Script file="LibButtonGlow-1.0.lua"/>
+	<Script file="LibBlizzardProcs.lua"/>
 </Ui>

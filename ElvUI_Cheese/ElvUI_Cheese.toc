@@ -1,9 +1,0 @@
-﻿## Interface: 30300
-## Title: |cffA11313E|r|cffC4C4C4lvUI|r |cffA11313C|r|cffC4C4C4heese|r
-## Version: 1.00
-## Notes: Cataclysm Visual Alerts
-## RequiredDeps: ElvUI
-
-Libraries\Load_Libraries.xml
-Locales\Load_Locales.xml
-ElvUI_Cheese.lua
