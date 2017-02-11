@@ -1,10 +1,13 @@
-﻿local E, L, V, P, G = unpack(ElvUI)
+local E, L, V, P, G = unpack(ElvUI)
 local LBP = LibStub("LibBlizzardProcs-1.0", true)
 local LAB = LibStub("LibActionButton-1.0")
 local EP = LibStub("LibElvUIPlugin-1.0")
-local VP = E:NewModule("ElvUI_VisualProcs")
+local VP = E:NewModule("VisualProcs", "AceEvent-3.0")
 
 local AddOnName = ...
+
+local find = string.find
+local pairs = pairs
 
 P.visualProcs = {
 	overlay = {
@@ -126,6 +129,17 @@ local function OverlayHide(self, spellID)
 	end
 end
 
+function VP:OnEvent(event, ...)
+	self:UnregisterEvent(event)
+	self:ToggleTestFrame()
+
+	if event == "PLAYER_REGEN_DISABLED" then
+		self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
+	else
+		self:RegisterEvent("PLAYER_REGEN_DISABLED", "OnEvent")
+	end
+end
+
 function VP:ToggleTestFrame()
 	self.overlayFrame.test = not self.overlayFrame.test
 
@@ -133,8 +147,22 @@ function VP:ToggleTestFrame()
 		local path = LBP.mediaPath .. "overlay\\"
 
 		LBP:HideAllOverlays(self.overlayFrame)
-		LBP:ShowAllOverlays(self.overlayFrame, 90000, path .. "Molten_Core.blp", "Left + Right (Flipped)", 1, 1, 1, 1)
-		LBP:ShowAllOverlays(self.overlayFrame, 90001, path .. "Backlash.blp", "TOP + BOTTOM (Flipped)", 1, 1, 1, 1)
+
+		local foundTop, foundLeft
+		for _, data in pairs(LBP_Data.OverlayTextures[LBP.playerClass]) do
+			if not foundTop and find(data[3], "Top") then
+				foundTop = true
+				LBP:ShowAllOverlays(self.overlayFrame, 100000, path .. data[2], data[3], data[4], data[5], data[6], data[7])
+			elseif not foundLeft and find(data[3], "Left") then
+				foundLeft = true
+				LBP:ShowAllOverlays(self.overlayFrame, 100001, path .. data[2], data[3], data[4], data[5], data[6], data[7])
+			end
+			if foundTop and foundLeft then
+				break
+			end
+		end
+
+		self:RegisterEvent("PLAYER_REGEN_DISABLED", "OnEvent")
 	else
 		LBP:HideAllOverlays(self.overlayFrame)
 	end
@@ -192,6 +220,8 @@ function VP:ToggleOverlay()
 		LBP:UnregisterEvent("SPELL_ACTIVATION_OVERLAY_HIDE", self.overlayFrame)
 
 		LBP:DisableOverlays()
+		self:UnregisterAllEvents()
+		self.overlayFrame.test = false
 		self.overlayFrame:Hide()
 	end
 

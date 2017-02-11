@@ -994,6 +994,6 @@ end
 
 function lib:Disable()
 	lib.eventFrame:SetScript("OnEvent", nil);
-	lib.eventFrame:UnregisterAllEvent();
+	lib.eventFrame:UnregisterAllEvents();
 	twipe(buffs)
 end
