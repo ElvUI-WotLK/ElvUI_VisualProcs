@@ -1,4 +1,4 @@
-local E, L, V, P, G = unpack(ElvUI)
+﻿local E, L, V, P, G = unpack(ElvUI)
 local LBP = LibStub("LibBlizzardProcs-1.0", true)
 local LAB = LibStub("LibActionButton-1.0")
 local EP = LibStub("LibElvUIPlugin-1.0")
@@ -23,8 +23,21 @@ local function GetOptions()
 		childGroups = "select",
 		name = "VisualProcs",
 		args = {
-			buttonGlow = {
+			overlayTest = {
 				order = 1,
+				type = "execute",
+				name = L["Show/Hide Overlay"],
+				func = function(info) VP:ToggleTestFrame() end,
+				disabled = function() return not (LBP.isClassSupported and E.db.visualProcs.overlay.enable) end,
+			},
+			spacer = {
+				order = 2,
+				type = "description",
+				width = "full",
+				name = "",
+			},
+			buttonGlow = {
+				order = 3,
 				type = "toggle",
 				name = L["Button Glow"],
 				get = function(info) return E.db.visualProcs.buttonGlow.enable end,
@@ -35,7 +48,7 @@ local function GetOptions()
 				disabled = function() return not LBP.isClassSupported end,
 			},
 			overlay = {
-				order = 2,
+				order = 4,
 				type = "toggle",
 				name = L["Overlay Frame"],
 				get = function(info) return E.db.visualProcs.overlay.enable end,
@@ -44,6 +57,18 @@ local function GetOptions()
 					VP:ToggleOverlay()
 				end,
 				disabled = function() return not LBP.isClassSupported end,
+			},
+			overlayScale = {
+				order = 5,
+				type = "range",
+				min = 0.1, max = 2, step = 0.01,
+				name = L["Overlay Frame Scale"],
+				get = function(info) return E.db.visualProcs.overlay.scale end,
+				set = function(info, value)
+					E.db.visualProcs.overlay.scale = value
+					VP:UpdateOverlay()
+				end,
+				disabled = function() return not (LBP.isClassSupported and E.db.visualProcs.overlay.enable) end,
 			}
 		}
 	}
@@ -101,6 +126,20 @@ local function OverlayHide(self, spellID)
 	end
 end
 
+function VP:ToggleTestFrame()
+	self.overlayFrame.test = not self.overlayFrame.test
+
+	if self.overlayFrame.test then
+		local path = LBP.mediaPath .. "overlay\\"
+
+		LBP:HideAllOverlays(self.overlayFrame)
+		LBP:ShowAllOverlays(self.overlayFrame, 90000, path .. "Molten_Core.blp", "Left + Right (Flipped)", 1, 1, 1, 1)
+		LBP:ShowAllOverlays(self.overlayFrame, 90001, path .. "Backlash.blp", "TOP + BOTTOM (Flipped)", 1, 1, 1, 1)
+	else
+		LBP:HideAllOverlays(self.overlayFrame)
+	end
+end
+
 function VP:ToggleButtonGlow()
 	if not LBP.isClassSupported then return end
 
@@ -129,6 +168,14 @@ function VP:UpdateOverlay()
 	LBP.overlay.shortSide = 128 * scale
 
 	self.overlayFrame:SetSize(256 * scale, 256 * scale)
+
+	for spellID, overlayList in pairs(LBP.overlay.inUse) do
+		if(overlayList) then
+			for i = 1, #overlayList do
+				LBP:OverlayPointSize(self.overlayFrame, overlayList[i], 1);
+			end
+		end
+	end
 end
 
 function VP:ToggleOverlay()

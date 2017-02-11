@@ -1,5 +1,5 @@
 local MAJOR_VERSION = "LibBlizzardProcs-1.0";
-local MINOR_VERSION = 1;
+local MINOR_VERSION = 2;
 
 if not LibStub then error(MAJOR_VERSION .. " requires LibStub.") end
 local lib, oldversion = LibStub:NewLibrary(MAJOR_VERSION, MINOR_VERSION)
@@ -396,6 +396,21 @@ local function CreateAlphaAnim(group, target, order, duration, change, delay, on
 	alpha:SetScript("OnFinished", onFinished or AlphaAnimation_OnFinished);
 end
 
+local function CreateBlizzAlphaAnim(group, order, duration, change, delay)
+	local alpha = group:CreateAnimation("Alpha");
+
+	if(order) then
+		alpha:SetOrder(order);
+	end
+
+	alpha:SetDuration(duration);
+	alpha:SetChange(change);
+
+	if(delay) then
+		alpha:SetStartDelay(delay);
+	end
+end
+
 local function InitScaleAnimation(self)
 	local target = self.target;
 	if(not target) then
@@ -532,6 +547,22 @@ local function CreateScaleAnim(group, target, order, duration, x, y, delay, smoo
 	scale:SetScript("OnUpdate", ScaleAnimation_OnUpdate);
 	scale:SetScript("OnStop", ScaleAnimation_OnStop);
 	scale:SetScript("OnFinished", ScaleAnimation_OnFinished);
+end
+
+local function CreateBlizzScaleAnim(group, order, duration, x, y, delay, smoothing)
+	local scale = group:CreateAnimation("Scale");
+
+	scale:SetOrder(order);
+	scale:SetDuration(duration);
+	scale:SetScale(x, y);
+
+	if(delay) then
+		scale:SetStartDelay(delay);
+	end
+
+	if(smoothing) then
+		scale:SetSmoothing(smoothing);
+	end
 end
 
 local function AnimateTexCoords(texture, textureWidth, textureHeight, frameWidth, frameHeight, numFrames, elapsed, throttle)
@@ -783,25 +814,13 @@ function lib:ShowAllOverlays(frame, spellID, texturePath, positions, scale, r, g
 	end
 end
 
-function lib:ShowOverlay(frame, spellID, texturePath, position, scale, r, g, b, vFlip, hFlip)
-	local overlay = lib:GetOverlay(frame, spellID, position);
-	overlay.spellID = spellID;
-	overlay.position = position;
-
+function lib:OverlayPointSize(frame, overlay, scale)
 	overlay:ClearAllPoints();
-
-	local texLeft, texRight, texTop, texBottom = 0, 1, 0, 1;
-	if(vFlip) then
-		texTop, texBottom = 1, 0;
-	end
-	if(hFlip) then
-		texLeft, texRight = 1, 0;
-	end
-	overlay.texture:SetTexCoord(texLeft, texRight, texTop, texBottom);
 
 	local longSide, shortSide = lib.overlay.longSide, lib.overlay.shortSide
 	local width, height;
 
+	local position = overlay.position;
 	if(position == "CENTER") then
 		width, height = longSide, longSide;
 		overlay:SetPoint("CENTER", frame, "CENTER", 0, 0);
@@ -829,11 +848,26 @@ function lib:ShowOverlay(frame, spellID, texturePath, position, scale, r, g, b, 
 	elseif(position == "BOTTOMLEFT") then
 		width, height = shortSide, shortSide;
 		overlay:SetPoint("TOPRIGHT", frame, "BOTTOMLEFT", 0, 0);
-	else
-		return;
 	end
 
 	overlay:SetSize(width * scale, height * scale);
+end
+
+function lib:ShowOverlay(frame, spellID, texturePath, position, scale, r, g, b, vFlip, hFlip)
+	local overlay = lib:GetOverlay(frame, spellID, position);
+	overlay.spellID = spellID;
+	overlay.position = position;
+
+	local texLeft, texRight, texTop, texBottom = 0, 1, 0, 1;
+	if(vFlip) then
+		texTop, texBottom = 1, 0;
+	end
+	if(hFlip) then
+		texLeft, texRight = 1, 0;
+	end
+	overlay.texture:SetTexCoord(texLeft, texRight, texTop, texBottom);
+
+	lib:OverlayPointSize(frame, overlay, scale);
 
 	overlay.texture:SetTexture(texturePath);
 	overlay.texture:SetVertexColor(r, g, b);
@@ -900,23 +934,17 @@ function lib:GetUnusedOverlay(frame)
 	return overlay;
 end
 
-local function Texture_OnShow(self)
+local function Overlay_OnShow(self)
 	self.animIn:Play();
 end
 
-local function Texture_OnFadeInPlay(animGroup)
-	animGroup:GetParent():SetAlpha(0);
-end
-
-local function Texture_OnFadeInFinished(animGroup)
+local function OverlayTexture_OnFadeInFinished(animGroup)
 	local overlay = animGroup:GetParent();
-	overlay:SetAlpha(1);
 	overlay.pulse:Play();
 end
 
-local function Texture_OnFadeOutFinished(self)
-	AlphaAnimation_OnFinished(self);
-	local overlay = self:GetRegionParent();
+local function OverlayTexture_OnFadeOutFinished(animGroup)
+	local overlay = animGroup:GetParent();
 	overlay.pulse:Stop();
 	overlay:Hide();
 	tDeleteItem(lib.overlay.inUse[overlay.spellID], overlay);
@@ -928,22 +956,23 @@ function lib:CreateOverlay(frame)
 	overlay:Hide();
 
 	overlay.animIn = overlay:CreateAnimationGroup();
-	CreateAlphaAnim(overlay.animIn, nil, nil, 0.2, 1);
-	overlay.animIn:SetScript("OnPlay", Texture_OnFadeInPlay);
-	overlay.animIn:SetScript("OnFinished", Texture_OnFadeInFinished);
+	CreateBlizzAlphaAnim(overlay.animIn, 1, 0, -1);
+	CreateBlizzAlphaAnim(overlay.animIn, 2, 0.2, 1);
+	overlay.animIn:SetScript("OnFinished", OverlayTexture_OnFadeInFinished);
 
 	overlay.animOut = overlay:CreateAnimationGroup();
-	CreateAlphaAnim(overlay.animOut, nil, nil, 0.1, -1, nil, nil, Texture_OnFadeOutFinished);
+	CreateBlizzAlphaAnim(overlay.animOut, 1, 0.1, -1);
+	overlay.animOut:SetScript("OnFinished", OverlayTexture_OnFadeOutFinished);
 
 	overlay.pulse = overlay:CreateAnimationGroup();
 	overlay.pulse:SetLooping("REPEAT");
-	CreateScaleAnim(overlay.pulse, nil, 1, 0.5, 1.08, 1.08, nil, "IN_OUT");
-	CreateScaleAnim(overlay.pulse, nil, 2, 0.5, 0.9259, 0.9259, nil, "IN_OUT");
+	CreateBlizzScaleAnim(overlay.pulse, 1, 0, 1, 1);
+	CreateBlizzScaleAnim(overlay.pulse, 2, 0.5, 1.08, 1.08, nil, "IN_OUT");
+	CreateBlizzScaleAnim(overlay.pulse, 3, 0.5, 0.9259, 0.9259, nil, "IN_OUT");
 
 	overlay.texture = overlay:CreateTexture(nil, "ARTWORK");
 	overlay.texture:SetAllPoints();
-	overlay:SetScript("OnShow", Texture_OnShow);
-	overlay:SetScript("OnHide", nil);
+	overlay:SetScript("OnShow", Overlay_OnShow);
 
 	lib.callbacks:Fire("OnOverlayCreated", overlay);
 
