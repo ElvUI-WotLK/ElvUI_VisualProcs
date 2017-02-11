@@ -165,6 +165,7 @@ function VP:ToggleTestFrame()
 		self:RegisterEvent("PLAYER_REGEN_DISABLED", "OnEvent")
 	else
 		LBP:HideAllOverlays(self.overlayFrame)
+		self:UnregisterEvent("PLAYER_REGEN_DISABLED")
 	end
 end
 
