@@ -20,11 +20,11 @@ P.visualProcs = {
 }
 
 local function GetOptions()
-	E.Options.args.PinyaProfiles = {
-		order = -20,
+	E.Options.args.visualProcs = {
+		order = 50,
 		type = "group",
 		childGroups = "select",
-		name = "VisualProcs",
+		name = "|cff0070ddVisual Procs|r",
 		args = {
 			overlayTest = {
 				order = 1,
@@ -129,17 +129,6 @@ local function OverlayHide(self, spellID)
 	end
 end
 
-function VP:OnEvent(event, ...)
-	self:UnregisterEvent(event)
-	self:ToggleTestFrame()
-
-	if event == "PLAYER_REGEN_DISABLED" then
-		self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
-	else
-		self:RegisterEvent("PLAYER_REGEN_DISABLED", "OnEvent")
-	end
-end
-
 function VP:ToggleTestFrame()
 	self.overlayFrame.test = not self.overlayFrame.test
 
@@ -162,7 +151,7 @@ function VP:ToggleTestFrame()
 			end
 		end
 
-		self:RegisterEvent("PLAYER_REGEN_DISABLED", "OnEvent")
+		self:RegisterEvent("PLAYER_REGEN_DISABLED", "ToggleTestFrame")
 	else
 		LBP:HideAllOverlays(self.overlayFrame)
 		self:UnregisterEvent("PLAYER_REGEN_DISABLED")
