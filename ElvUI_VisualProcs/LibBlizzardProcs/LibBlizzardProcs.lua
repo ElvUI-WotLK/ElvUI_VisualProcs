@@ -1,5 +1,5 @@
 local MAJOR_VERSION = "LibBlizzardProcs-1.0";
-local MINOR_VERSION = 2;
+local MINOR_VERSION = 3;
 
 if not LibStub then error(MAJOR_VERSION .. " requires LibStub.") end
 local lib, oldversion = LibStub:NewLibrary(MAJOR_VERSION, MINOR_VERSION)
@@ -17,6 +17,7 @@ local tinsert, tremove, twipe = table.insert, table.remove, table.wipe;
 -- WoW APIs
 local CreateFrame = CreateFrame;
 local PlayerFrame = PlayerFrame;
+local PlaySoundFile = PlaySoundFile;
 local UnitBuff = UnitBuff;
 
 local CBH = LibStub("CallbackHandler-1.0");
@@ -55,6 +56,7 @@ lib.mediaPath = lib.mediaPath or "Interface\\AddOns\\LibBlizzardProcs\\textures\
 
 lib.disableOverlay = lib.disableOverlay or false;
 lib.disableButtonGlow = lib.disableButtonGlow or false;
+lib.disableSound = lib.disableSound or false
 
 local actionButtons = {};
 local buffs = {};
@@ -873,7 +875,11 @@ function lib:ShowOverlay(frame, spellID, texturePath, position, scale, r, g, b, 
 	overlay.texture:SetVertexColor(r, g, b);
 
 	overlay.animOut:Stop();
-	PlaySoundFile("Sound\\Spells\\ReputationLevelUp.wav", "SFX")
+
+	if not lib.disableSound then
+		PlaySoundFile("Sound\\Spells\\ReputationLevelUp.wav", "SFX")
+	end
+
 	overlay:Show();
 end
 

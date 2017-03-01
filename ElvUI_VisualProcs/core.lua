@@ -13,6 +13,7 @@ P.visualProcs = {
 	overlay = {
 		enable = true,
 		scale = 0.8,
+		disableSound = false,
 	},
 	buttonGlow = {
 		enable = true,
@@ -70,6 +71,18 @@ local function GetOptions()
 				set = function(info, value)
 					E.db.visualProcs.overlay.scale = value
 					VP:UpdateOverlay()
+				end,
+				disabled = function() return not (LBP.isClassSupported and E.db.visualProcs.overlay.enable) end,
+			},
+			disableSound = {
+				order = 6,
+				type = "toggle",
+				name = L["Disable Sound"],
+				desc = L["Disable playing sound on overlay proc."],
+				get = function(info) return E.db.visualProcs.overlay.disableSound end,
+				set = function(info, value)
+					E.db.visualProcs.overlay.disableSound = value
+					VP:UpdateSettings()
 				end,
 				disabled = function() return not (LBP.isClassSupported and E.db.visualProcs.overlay.enable) end,
 			}
@@ -196,6 +209,12 @@ function VP:UpdateOverlay()
 	end
 end
 
+function VP:UpdateSettings()
+	if not LBP.isClassSupported then return end
+
+	LBP.disableSound = E.db.visualProcs.overlay.disableSound
+end
+
 function VP:ToggleOverlay()
 	if not LBP.isClassSupported then return end
 
@@ -236,6 +255,7 @@ function VP:Initialize()
 	self.overlayFrame = CreateFrame("Frame", "ElvUI_VisualProcsOverlay", UIParent)
 	self.overlayFrame:Point("CENTER")
 
+	self:UpdateSettings()
 	self:ToggleButtonGlow()
 	self:UpdateOverlay()
 	self:ToggleOverlay()
