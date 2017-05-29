@@ -263,4 +263,8 @@ function VP:Initialize()
 	EP:RegisterPlugin(AddOnName, GetOptions)
 end
 
-E:RegisterModule(VP:GetName())
+local function InitializeCallback()
+	VP:Initialize()
+end
+
+E:RegisterModule(VP:GetName(), InitializeCallback)
