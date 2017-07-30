@@ -20,6 +20,14 @@ local PlayerFrame = PlayerFrame;
 local PlaySoundFile = PlaySoundFile;
 local UnitBuff = UnitBuff;
 
+local function tcount(t)
+	local i = 0
+	for _ in pairs(t) do
+		i = i + 1
+	end
+	return i
+end
+
 local CBH = LibStub("CallbackHandler-1.0");
 
 lib.eventFrame = lib.eventFrame or CreateFrame("Frame")
@@ -50,7 +58,7 @@ lib.event = {
 lib.callbacks = lib.callbacks or CBH:New(lib);
 
 lib.playerClass = lib.playerClass or select(2, UnitClass("player"));
-lib.isClassSupported = lib.isClassSupported or lib.playerClass and (#LBP_Data.ButtonProcs[lib.playerClass] > 0 or #LBP_Data.OverlayProcs[lib.playerClass] > 0)
+lib.isClassSupported = lib.isClassSupported or lib.playerClass and (#LBP_Data.ButtonProcs[lib.playerClass] > 0 or tcount(LBP_Data.OverlayProcs[lib.playerClass]) > 0)
 
 lib.mediaPath = lib.mediaPath or "Interface\\AddOns\\LibBlizzardProcs\\textures\\";
 
@@ -215,9 +223,7 @@ end
 
 local function OnEvent(_, event, unit, ...)
 	if event == "UNIT_AURA" then
-		local playerUnit = PlayerFrame.unit;
-
-		if(unit == playerUnit) then
+		if(unit == PlayerFrame.unit) then
 			local overlayProcList = LBP_Data.OverlayProcs[lib.playerClass]
 
 			local overlayTextures;
