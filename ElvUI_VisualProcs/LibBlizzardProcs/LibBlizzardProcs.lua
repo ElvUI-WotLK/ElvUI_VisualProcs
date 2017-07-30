@@ -181,16 +181,14 @@ function lib:DisableButtonGlows()
 end
 
 local function BuffGained(spellID, textureData)
-	if not lib.disableOverlay then
-		if textureData then
-			local texture = lib.mediaPath .. "overlay\\" .. textureData[2]
-			local positions = textureData[3]
-			local scale = textureData[4]
-			local r, g, b = textureData[5], textureData[6], textureData[7]
+	if not lib.disableOverlay and textureData then
+		local texture = lib.mediaPath .. "overlay\\" .. textureData[2]
+		local positions = textureData[3]
+		local scale = textureData[4]
+		local r, g, b = textureData[5], textureData[6], textureData[7]
 
-			for frame, func in pairs(lib.overlayShow) do
-				func(frame, spellID, texture, positions, scale, r, g, b);
-			end
+		for frame, func in pairs(lib.overlayShow) do
+			func(frame, spellID, texture, positions, scale, r, g, b);
 		end
 	end
 
@@ -221,7 +219,7 @@ local function BuffLost(spellID)
 	end
 end
 
-local function OnEvent(_, event, unit, ...)
+local function OnEvent(_, event, unit)
 	if event == "UNIT_AURA" then
 		if(unit == PlayerFrame.unit) then
 			local overlayProcList = LBP_Data.OverlayProcs[lib.playerClass]
