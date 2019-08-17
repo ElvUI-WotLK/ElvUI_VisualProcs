@@ -1,6 +1,6 @@
 local E, L, V, P, G = unpack(ElvUI)
 local LBP = LibStub("LibBlizzardProcs-1.0", true)
-local LAB = LibStub("LibActionButton-1.0")
+local LAB = LibStub("LibActionButton-1.0-ElvUI")
 local EP = LibStub("LibElvUIPlugin-1.0")
 local VP = E:NewModule("VisualProcs", "AceEvent-3.0")
 
