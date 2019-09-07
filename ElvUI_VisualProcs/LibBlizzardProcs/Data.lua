@@ -763,6 +763,8 @@ LBP_Data.OverlayProcs = {
 		[63731] = 1,
 		[63734] = 1,
 		[63735] = 1,
+		-- Surge of Light
+		[33151] = 2,
 	},
 	ROGUE = {
 	},
@@ -844,6 +846,8 @@ LBP_Data.OverlayTextures = {
 	PRIEST = {
 		-- Serendipity
 		{3, "Serendipity.blp", "Top", 1, 1, 1, 1},
+		-- Surge of Light
+		{0, "Surge_of_Light.blp", "Left + Right (Flipped)", 1, 1, 1, 1},
 	},
 	ROGUE = {
 	},
