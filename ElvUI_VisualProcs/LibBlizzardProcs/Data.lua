@@ -159,6 +159,11 @@ LBP_Data.ButtonSpells = {
 		[49045] = 3,
 		[51742] = 3,
 		[53214] = 3,
+
+		-- Kill Shot
+		[53351] = 4,
+		[61005] = 4,
+		[61006] = 4,
 	},
 	MAGE = {
 		-- Missile Barrage
@@ -641,6 +646,8 @@ LBP_Data.ButtonProcs = {
 		{56453},
 		-- Improved Steady Shot / Lock and Load
 		{53220, 56453},
+		-- Kill Shot
+		{61006},
 	},
 	MAGE = {
 		-- Missile Barrage
@@ -730,6 +737,8 @@ LBP_Data.OverlayProcs = {
 		[53220] = 1,
 		-- Lock and Load
 		[56453] = 2,
+		-- Kill Shot
+		[61006] = nil,
 	},
 	MAGE = {
 		-- Hot Streak
