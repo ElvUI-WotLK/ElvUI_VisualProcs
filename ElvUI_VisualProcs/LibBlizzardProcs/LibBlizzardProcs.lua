@@ -219,6 +219,25 @@ local function BuffLost(spellID)
 	end
 end
 
+local function HasExecute()
+	local percent = UnitHealth("target") / UnitHealthMax("target") * 100
+	if percent < 20 then
+		if lib.playerClass == "PALADIN" then
+			BuffGained(24275)
+		elseif lib.playerClass == "WARRIOR" then
+			BuffGained(5308)
+		end
+	else
+		if lib.playerClass == "PALADIN" then
+			BuffLost(24275)
+		elseif lib.playerClass == "WARRIOR" then
+			if not buffs[52437] then
+				BuffLost(5308)
+			end
+		end
+	end
+end
+
 local function OnEvent(_, event, unit)
 	if event == "UNIT_AURA" then
 		if(unit == PlayerFrame.unit) then
@@ -295,6 +314,16 @@ local function OnEvent(_, event, unit)
 		end
 
 		lib.eventFrame:UnregisterEvent("PLAYER_ENTERING_WORLD");
+	elseif event == "PLAYER_TARGET_CHANGED" then
+		if UnitExists("target") == 1 then
+			lib.eventFrame:RegisterEvent("UNIT_HEALTH")
+		else
+			lib.eventFrame:UnregisterEvent("UNIT_HEALTH")
+		end
+
+		HasExecute()
+	elseif event == "UNIT_HEALTH" and unit == "target" then
+		HasExecute()
 	end
 end
 
@@ -999,6 +1028,10 @@ function lib:Enable()
 
 		lib.eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD");
 		lib.eventFrame:RegisterEvent("UNIT_AURA");
+
+		if lib.playerClass == "PALADIN" or lib.playerClass == "WARRIOR" then
+			lib.eventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
+		end
 	end
 end
 
