@@ -222,24 +222,48 @@ local function BuffLost(spellID)
 	end
 end
 
+local function ExecuteGained(spellID)
+	if lib.disableButtonGlow then return end
+
+	local glowSpells = buffGlowSpells[spellID]
+	if glowSpells then
+		for globalID in pairs(glowSpells) do
+			if not lib:IsSpellOverlayed(globalID) then
+				AddOverlayGlow(globalID)
+			end
+		end
+	end
+end
+
+local function ExecuteLost(spellID)
+	if lib.disableButtonGlow then return end
+
+	local glowSpells = buffGlowSpells[spellID];
+	if(glowSpells) then
+		for globalID in pairs(glowSpells) do
+			RemoveOverlayGlow(globalID);
+		end
+	end
+end
+
 local function HasExecute()
 	local percent = UnitHealth("target") / UnitHealthMax("target") * 100
 	if UnitExists("target") and percent > 0 and percent < 20 then
 		if lib.playerClass == "HUNTER" then
-			BuffGained(61006)
+			ExecuteGained(61006)
 		elseif lib.playerClass == "PALADIN" then
-			BuffGained(24275)
+			ExecuteGained(24275)
 		elseif lib.playerClass == "WARRIOR" then
-			BuffGained(5308)
+			ExecuteGained(5308)
 		end
 	else
 		if lib.playerClass == "HUNTER" then
-			BuffLost(61006)
+			ExecuteLost(61006)
 		elseif lib.playerClass == "PALADIN" then
-			BuffLost(24275)
+			ExecuteLost(24275)
 		elseif lib.playerClass == "WARRIOR" then
 			if not buffs[52437] then
-				BuffLost(5308)
+				ExecuteLost(5308)
 			end
 		end
 	end
