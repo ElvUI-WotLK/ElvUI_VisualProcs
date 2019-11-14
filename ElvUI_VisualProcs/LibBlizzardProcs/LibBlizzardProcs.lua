@@ -15,21 +15,16 @@ local floor, ceil = math.floor, math.ceil;
 local tinsert, tremove, twipe = table.insert, table.remove, table.wipe;
 
 -- WoW APIs
-local CreateFrame = CreateFrame;
-local PlayerFrame = PlayerFrame;
-local PlaySoundFile = PlaySoundFile;
-local UnitBuff = UnitBuff;
+local CreateFrame = CreateFrame
+local PlaySoundFile = PlaySoundFile
+local PlayerFrame = PlayerFrame
+local UnitBuff = UnitBuff
 local UnitExists = UnitExists
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
-
-local function tcount(t)
-	local i = 0
-	for _ in pairs(t) do
-		i = i + 1
-	end
-	return i
-end
+local UnitIsConnected = UnitIsConnected
+local UnitIsEnemy = UnitIsEnemy
+local UnitIsPlayer = UnitIsPlayer
 
 local CBH = LibStub("CallbackHandler-1.0");
 
@@ -61,13 +56,19 @@ lib.event = {
 lib.callbacks = lib.callbacks or CBH:New(lib);
 
 lib.playerClass = lib.playerClass or select(2, UnitClass("player"));
-lib.isClassSupported = lib.isClassSupported or lib.playerClass and (#LBP_Data.ButtonProcs[lib.playerClass] > 0 or tcount(LBP_Data.OverlayProcs[lib.playerClass]) > 0)
+lib.isClassSupported = lib.isClassSupported or lib.playerClass and (#LBP_Data.ButtonProcs[lib.playerClass] > 0 or next(LBP_Data.OverlayProcs[lib.playerClass]))
 
 lib.mediaPath = lib.mediaPath or "Interface\\AddOns\\LibBlizzardProcs\\textures\\";
 
 lib.disableOverlay = lib.disableOverlay or false;
 lib.disableButtonGlow = lib.disableButtonGlow or false;
 lib.disableSound = lib.disableSound or false
+
+lib.executeSpellIDs = {
+	["HUNTER"] = 61006,
+	["PALADIN"] = 24275,
+	["WARRIOR"] = 5308,
+}
 
 local actionButtons = {};
 local buffs = {};
@@ -205,8 +206,8 @@ local function BuffGained(spellID, textureData)
 	end
 end
 
-local function BuffLost(spellID)
-	if not lib.disableOverlay then
+local function BuffLost(spellID, noOverlay)
+	if not lib.disableOverlay and not noOverlay then
 		for frame, func in pairs(lib.overlayHide) do
 			func(frame, spellID);
 		end
@@ -222,50 +223,26 @@ local function BuffLost(spellID)
 	end
 end
 
-local function ExecuteGained(spellID)
-	if lib.disableButtonGlow then return end
+local function ExecuteCheckHealth()
+	local hp = UnitHealth("target") / UnitHealthMax("target") * 100
 
-	local glowSpells = buffGlowSpells[spellID]
-	if glowSpells then
-		for globalID in pairs(glowSpells) do
-			if not lib:IsSpellOverlayed(globalID) then
-				AddOverlayGlow(globalID)
-			end
-		end
+	if hp < 20 and hp > 0 then
+		return true
 	end
 end
 
-local function ExecuteLost(spellID)
-	if lib.disableButtonGlow then return end
+local function ExecuteUpdate()
+	if lib.executeValidTarget and ExecuteCheckHealth() then
+		if not lib.executeShown then
+			BuffGained(lib.executeSpellIDs[lib.playerClass])
+			lib.executeShown = true
+		end
+	elseif lib.executeShown then
+		if lib.playerClass ~= "WARRIOR" or not buffs[52437] then
+			BuffLost(lib.executeSpellIDs[lib.playerClass], true)
+		end
 
-	local glowSpells = buffGlowSpells[spellID];
-	if(glowSpells) then
-		for globalID in pairs(glowSpells) do
-			RemoveOverlayGlow(globalID);
-		end
-	end
-end
-
-local function HasExecute()
-	local percent = UnitHealth("target") / UnitHealthMax("target") * 100
-	if UnitExists("target") and percent > 0 and percent < 20 then
-		if lib.playerClass == "HUNTER" then
-			ExecuteGained(61006)
-		elseif lib.playerClass == "PALADIN" then
-			ExecuteGained(24275)
-		elseif lib.playerClass == "WARRIOR" then
-			ExecuteGained(5308)
-		end
-	else
-		if lib.playerClass == "HUNTER" then
-			ExecuteLost(61006)
-		elseif lib.playerClass == "PALADIN" then
-			ExecuteLost(24275)
-		elseif lib.playerClass == "WARRIOR" then
-			if not buffs[52437] then
-				ExecuteLost(5308)
-			end
-		end
+		lib.executeShown = nil
 	end
 end
 
@@ -321,7 +298,7 @@ local function OnEvent(_, event, unit)
 		local overlayProcList = LBP_Data.OverlayProcs[lib.playerClass]
 
 		local overlayTextures;
-		local name, _, _, count, _, _, _, _, _, _, spellID
+		local _, name, count, spellID
 
 		for i = 1, 40 do
 			name, _, _, count, _, _, _, _, _, _, spellID = UnitBuff(unit, i);
@@ -347,14 +324,26 @@ local function OnEvent(_, event, unit)
 		lib.eventFrame:UnregisterEvent("PLAYER_ENTERING_WORLD");
 	elseif event == "PLAYER_TARGET_CHANGED" then
 		if UnitExists("target") then
-			lib.eventFrame:RegisterEvent("UNIT_HEALTH")
+			if UnitIsEnemy("target", "player") and (not UnitIsPlayer("target") or UnitIsConnected("target")) then
+				lib.executeValidTarget = true
+				lib.eventFrame:RegisterEvent("UNIT_HEALTH")
+			else
+				lib.executeValidTarget = nil
+				lib.eventFrame:UnregisterEvent("UNIT_HEALTH")
+			end
+
+			lib.eventFrame:RegisterEvent("UNIT_FACTION")
 		else
+			lib.executeValidTarget = nil
 			lib.eventFrame:UnregisterEvent("UNIT_HEALTH")
+			lib.eventFrame:UnregisterEvent("UNIT_FACTION")			
 		end
 
-		HasExecute()
+		ExecuteUpdate()
 	elseif event == "UNIT_HEALTH" and unit == "target" then
-		HasExecute()
+		ExecuteUpdate()
+	elseif event == "UNIT_FACTION" and unit == "target" then
+		OnEvent(_, "PLAYER_TARGET_CHANGED")
 	end
 end
 
@@ -1060,7 +1049,7 @@ function lib:Enable()
 		lib.eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD");
 		lib.eventFrame:RegisterEvent("UNIT_AURA");
 
-		if lib.playerClass == "HUNTER" or lib.playerClass == "PALADIN" or lib.playerClass == "WARRIOR" then
+		if lib.executeSpellIDs[lib.playerClass] then
 			lib.eventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
 		end
 	end
