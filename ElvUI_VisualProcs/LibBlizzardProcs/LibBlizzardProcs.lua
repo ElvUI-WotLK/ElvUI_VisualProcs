@@ -19,6 +19,9 @@ local CreateFrame = CreateFrame;
 local PlayerFrame = PlayerFrame;
 local PlaySoundFile = PlaySoundFile;
 local UnitBuff = UnitBuff;
+local UnitExists = UnitExists
+local UnitHealth = UnitHealth
+local UnitHealthMax = UnitHealthMax
 
 local function tcount(t)
 	local i = 0
@@ -221,7 +224,7 @@ end
 
 local function HasExecute()
 	local percent = UnitHealth("target") / UnitHealthMax("target") * 100
-	if percent < 20 then
+	if percent > 0 and percent < 20 then
 		if lib.playerClass == "HUNTER" then
 			BuffGained(61006)
 		elseif lib.playerClass == "PALADIN" then
