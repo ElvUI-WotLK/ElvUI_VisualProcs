@@ -224,7 +224,7 @@ end
 
 local function HasExecute()
 	local percent = UnitHealth("target") / UnitHealthMax("target") * 100
-	if percent > 0 and percent < 20 then
+	if UnitExists("target") and percent > 0 and percent < 20 then
 		if lib.playerClass == "HUNTER" then
 			BuffGained(61006)
 		elseif lib.playerClass == "PALADIN" then
@@ -322,7 +322,7 @@ local function OnEvent(_, event, unit)
 
 		lib.eventFrame:UnregisterEvent("PLAYER_ENTERING_WORLD");
 	elseif event == "PLAYER_TARGET_CHANGED" then
-		if UnitExists("target") == 1 then
+		if UnitExists("target") then
 			lib.eventFrame:RegisterEvent("UNIT_HEALTH")
 		else
 			lib.eventFrame:UnregisterEvent("UNIT_HEALTH")
