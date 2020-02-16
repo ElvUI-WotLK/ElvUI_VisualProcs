@@ -185,7 +185,7 @@ function lib:DisableButtonGlows()
 end
 
 local function BuffGained(spellID, textureData)
-	if not lib.disableOverlay and textureData then
+	if not lib.disableOverlay and textureData and textureData[2] then
 		local texture = lib.mediaPath .. "overlay\\" .. textureData[2]
 		local positions = textureData[3]
 		local scale = textureData[4]
