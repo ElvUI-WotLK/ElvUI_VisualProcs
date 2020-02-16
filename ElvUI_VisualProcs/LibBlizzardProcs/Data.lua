@@ -347,7 +347,7 @@ LBP_Data.ButtonSpells = {
 		[75412] = 6,
 		[75419] = 6,
 
-		-- Impact / Fingers of Frost 
+		-- Impact / Fingers of Frost
 		[13339] = 7,
 		[13340] = 7,
 		[13341] = 7,
@@ -662,7 +662,7 @@ LBP_Data.ButtonProcs = {
 		{64343},
 		-- Fingers of Frost
 		{74396},
-		-- Impact / Fingers of Frost 
+		-- Impact / Fingers of Frost
 		{64343, 74396},
 	},
 	PALADIN = {

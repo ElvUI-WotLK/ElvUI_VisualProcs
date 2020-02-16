@@ -1,4 +1,5 @@
 local E, L, V, P, G = unpack(ElvUI)
+
 local LBP = LibStub("LibBlizzardProcs-1.0", true)
 local LAB = LibStub("LibActionButton-1.0-ElvUI")
 local EP = LibStub("LibElvUIPlugin-1.0")
@@ -91,13 +92,13 @@ local function GetOptions()
 end
 
 local function OverlayGlowShow(self, spellID)
-	if (self:GetSpellId() == spellID) then
+	if self:GetSpellId() == spellID then
 		LBP:ShowOverlayGlow(self)
 	end
 end
 
 local function OverlayGlowHide(self, spellID)
-	if (self:GetSpellId() == spellID) then
+	if self:GetSpellId() == spellID then
 		LBP:HideOverlayGlow(self)
 	end
 end
@@ -105,25 +106,25 @@ end
 local function UpdateOverlayGlow(self)
 	local spellID = self:GetSpellId()
 
-	if (self:HasAction()) then
-		if (not self.eventsRegistered) then
+	if self:HasAction() then
+		if not self.eventsRegistered then
 			LBP:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW", self, OverlayGlowShow)
 			LBP:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE", self, OverlayGlowHide)
 			self.eventsRegistered = true
 		end
 
-		if (spellID) then
-			LBP:ChangeAction(self._state_action, spellID);
+		if spellID then
+			LBP:ChangeAction(self._state_action, spellID)
 		end
 	else
-		if (self.eventsRegistered) then
+		if self.eventsRegistered then
 			LBP:UnregisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW", self)
 			LBP:UnregisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE", self)
 			self.eventsRegistered = nil
 		end
 	end
 
-	if (spellID and LBP:IsSpellOverlayed(spellID)) then
+	if spellID and LBP:IsSpellOverlayed(spellID) then
 		LBP:ShowOverlayGlow(self)
 	else
 		LBP:HideOverlayGlow(self)
@@ -135,7 +136,7 @@ local function OverlayShow(self, spellID, texture, positions, scale, r, g, b)
 end
 
 local function OverlayHide(self, spellID)
-	if (spellID) then
+	if spellID then
 		LBP:HideOverlays(self, spellID)
 	else
 		LBP:HideAllOverlays(self)
@@ -146,10 +147,9 @@ function VP:ToggleTestFrame()
 	self.overlayFrame.test = not self.overlayFrame.test
 
 	if self.overlayFrame.test then
-		local path = LBP.mediaPath .. "overlay\\"
-
 		LBP:HideAllOverlays(self.overlayFrame)
 
+		local path = LBP.mediaPath .. "overlay\\"
 		local foundTop, foundLeft
 		for _, data in pairs(LBP_Data.OverlayTextures[LBP.playerClass]) do
 			if not foundTop and find(data[3], "Top") then
@@ -159,6 +159,7 @@ function VP:ToggleTestFrame()
 				foundLeft = true
 				LBP:ShowAllOverlays(self.overlayFrame, 100001, path .. data[2], data[3], data[4], data[5], data[6], data[7])
 			end
+
 			if foundTop and foundLeft then
 				break
 			end
@@ -176,7 +177,7 @@ function VP:ToggleButtonGlow()
 
 	LBP.disableButtonGlow = not (E.private.actionbar.enable and E.db.visualProcs.buttonGlow.enable)
 
-	if (E.private.actionbar.enable and E.db.visualProcs.buttonGlow.enable) then
+	if E.private.actionbar.enable and E.db.visualProcs.buttonGlow.enable then
 		LAB.RegisterCallback(LBP, "OnButtonUpdate", function(_, button)
 			UpdateOverlayGlow(button)
 		end)
@@ -201,9 +202,9 @@ function VP:UpdateOverlay()
 	self.overlayFrame:SetSize(256 * scale, 256 * scale)
 
 	for spellID, overlayList in pairs(LBP.overlay.inUse) do
-		if(overlayList) then
+		if overlayList then
 			for i = 1, #overlayList do
-				LBP:OverlayPointSize(self.overlayFrame, overlayList[i], 1);
+				LBP:OverlayPointSize(self.overlayFrame, overlayList[i], 1)
 			end
 		end
 	end
@@ -220,7 +221,7 @@ function VP:ToggleOverlay()
 
 	LBP.disableOverlay = not E.db.visualProcs.overlay.enable
 
-	if (E.db.visualProcs.overlay.enable) then
+	if E.db.visualProcs.overlay.enable then
 		LBP:RegisterEvent("SPELL_ACTIVATION_OVERLAY_SHOW", self.overlayFrame, OverlayShow)
 		LBP:RegisterEvent("SPELL_ACTIVATION_OVERLAY_HIDE", self.overlayFrame, OverlayHide)
 		self.overlayFrame:Show()
