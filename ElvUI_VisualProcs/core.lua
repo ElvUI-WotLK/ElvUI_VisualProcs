@@ -8,7 +8,7 @@ local VP = E:NewModule("VisualProcs", "AceEvent-3.0")
 local AddOnName = ...
 
 local find = string.find
-local pairs = pairs
+local pairs, ipairs = pairs, ipairs
 
 P.visualProcs = {
 	overlay = {
@@ -151,7 +151,8 @@ function VP:ToggleTestFrame()
 
 		local path = LBP.mediaPath .. "overlay\\"
 		local foundTop, foundLeft
-		for _, data in pairs(LBP_Data.OverlayTextures[LBP.playerClass]) do
+
+		for _, data in ipairs(LBP_Data.OverlayTextures[LBP.playerClass]) do
 			if not foundTop and find(data[3], "Top") then
 				foundTop = true
 				LBP:ShowAllOverlays(self.overlayFrame, 100000, path .. data[2], data[3], data[4], data[5], data[6], data[7])
@@ -201,7 +202,7 @@ function VP:UpdateOverlay()
 
 	self.overlayFrame:SetSize(256 * scale, 256 * scale)
 
-	for spellID, overlayList in pairs(LBP.overlay.inUse) do
+	for _, overlayList in pairs(LBP.overlay.inUse) do
 		if overlayList then
 			for i = 1, #overlayList do
 				LBP:OverlayPointSize(self.overlayFrame, overlayList[i], 1)

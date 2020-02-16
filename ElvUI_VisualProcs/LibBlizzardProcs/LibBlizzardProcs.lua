@@ -12,7 +12,7 @@ local CBH = LibStub("CallbackHandler-1.0")
 
 -- Lua APIs
 local _G = _G
-local pairs, next = pairs, next
+local pairs, ipairs, next = pairs, ipairs, next
 local ceil, floor, fmod = math.ceil, math.floor, math.fmod
 local upper = string.upper
 local tinsert, tremove, twipe = table.insert, table.remove, table.wipe
@@ -65,10 +65,10 @@ lib.disableOverlay = lib.disableOverlay or false
 lib.disableButtonGlow = lib.disableButtonGlow or false
 lib.disableSound = lib.disableSound or false
 
-lib.executeSpellIDs = {
-	["HUNTER"] = 61006,
-	["PALADIN"] = 24275,
-	["WARRIOR"] = 5308,
+lib.ExecuteButtonSpells = lib.ExecuteButtonSpells or {
+	HUNTER = 61006,
+	PALADIN = 24275,
+	WARRIOR = 5308,
 }
 
 local actionButtons = {}
@@ -112,7 +112,7 @@ function lib:SetAction(action, spellID)
 	if spellID then
 		local procIdx = LBP_Data.ButtonSpells[lib.playerClass][spellID]
 		if procIdx then
-			for _, procID in pairs(LBP_Data.ButtonProcs[lib.playerClass][procIdx]) do
+			for _, procID in ipairs(LBP_Data.ButtonProcs[lib.playerClass][procIdx]) do
 				local glowSpells = buffGlowSpells[procID]
 
 				if not glowSpells then
@@ -149,7 +149,7 @@ function lib:ChangeAction(action, newSpellID)
 		local procIdx = LBP_Data.ButtonSpells[lib.playerClass][spellID]
 
 		if procIdx then
-			for _, procID in pairs(LBP_Data.ButtonProcs[lib.playerClass][procIdx]) do
+			for _, procID in ipairs(LBP_Data.ButtonProcs[lib.playerClass][procIdx]) do
 				local glowSpells = buffGlowSpells[procID]
 				local refCount = glowSpells[spellID]
 
@@ -239,12 +239,12 @@ end
 local function ExecuteUpdate()
 	if lib.executeValidTarget and ExecuteCheckHealth() then
 		if not lib.executeShown then
-			BuffGained(lib.executeSpellIDs[lib.playerClass])
+			BuffGained(lib.ExecuteButtonSpells[lib.playerClass])
 			lib.executeShown = true
 		end
 	elseif lib.executeShown then
 		if lib.playerClass ~= "WARRIOR" or not buffs[52437] then
-			BuffLost(lib.executeSpellIDs[lib.playerClass], true)
+			BuffLost(lib.ExecuteButtonSpells[lib.playerClass], true)
 		end
 
 		lib.executeShown = nil
@@ -378,21 +378,11 @@ end
 
 -- Animation Functions
 local function InitAlphaAnimation(self)
-	local target = self.target
-	if not target then
-		target = self:GetRegionParent()
-		self.target = target
-	end
+	self.target = self.target or self:GetRegionParent()
+	self.change = self.change or 0
 
-	local change = self.change
-	if not change then
-		change = 0
-		self.change = change
-	end
-
-	local frameAlpha = target:GetAlpha()
-	self.frameAlpha = frameAlpha
-	self.alphaFactor = frameAlpha + change - frameAlpha
+	self.frameAlpha = self.target:GetAlpha()
+	self.alphaFactor = self.frameAlpha + self.change - self.frameAlpha
 end
 
 local function TidyAlphaAnimation(self)
@@ -469,25 +459,11 @@ local function CreateBlizzAlphaAnim(group, order, duration, change, delay)
 end
 
 local function InitScaleAnimation(self)
-	local target = self.target
-	if not target then
-		target = self:GetRegionParent()
-		self.target = target
-	end
+	self.target = self.target or self:GetRegionParent()
+	self.scaleX = self.scaleX or 0
+	self.scaleY = self.scaleY or 0
 
-	local scaleX = self.scaleX
-	if not scaleX then
-		scaleX = 0
-		self.scaleX = scaleX
-	end
-
-	local scaleY = self.scaleY
-	if not scaleY then
-		scaleY = 0
-		self.scaleY = scaleY
-	end
-
-	local _, _, width, height = target:GetRect()
+	local _, _, width, height = self.target:GetRect()
 	if not width then return end
 
 	self.frameWidth = width
@@ -497,11 +473,11 @@ local function InitScaleAnimation(self)
 	self.heightFactor = height * self.scaleY - height
 
 	local setCenter
-	local parent = target:GetParent()
-	local numPoints = target:GetNumPoints()
+	local parent = self.target:GetParent()
+	local numPoints = self.target:GetNumPoints()
 
 	if numPoints > 0 then
-		local point, relativeTo, relativePoint, xOffset, yOffset = target:GetPoint(1)
+		local point, relativeTo, relativePoint, xOffset, yOffset = self.target:GetPoint(1)
 
 		if numPoints == 1 and point == "CENTER" then
 			setCenter = false
@@ -515,12 +491,12 @@ local function InitScaleAnimation(self)
 
 				i = i + 1
 				if numPoints >= i then
-					point, relativeTo, relativePoint, xOffset, yOffset = target:GetPoint(i)
+					point, relativeTo, relativePoint, xOffset, yOffset = self.target:GetPoint(i)
 				else
 					break
 				end
 			end
-			target:ClearAllPoints()
+
 			setCenter = true
 		end
 	else
@@ -528,9 +504,11 @@ local function InitScaleAnimation(self)
 	end
 
 	if setCenter then
-		local x, y = target:GetCenter()
+		local x, y = self.target:GetCenter()
 		local parentX, parentY = parent:GetCenter()
-		target:SetPoint("CENTER", x - parentX, y - parentY)
+
+		self.target:ClearAllPoints()
+		self.target:SetPoint("CENTER", x - parentX, y - parentY)
 	end
 
 	return 1
@@ -552,8 +530,11 @@ local function TidyScaleAnimation(self)
 		end
 	end
 
-	self.widthFactor, self.heightFactor = nil
-	self.frameWidth, self.frameHeight = nil
+	self.widthFactor = nil
+	self.heightFactor = nil
+
+	self.frameWidth = nil
+	self.frameHeight = nil
 end
 
 local function ScaleAnimation_OnUpdate(self, elapsed)
@@ -995,7 +976,7 @@ end
 
 function lib:DisableOverlays()
 	for _, overlayList in pairs(lib.overlay.inUse) do
-		for _, overlay in pairs(overlayList) do
+		for _, overlay in ipairs(overlayList) do
 			lib:HideAllOverlays(overlay)
 		end
 	end
@@ -1022,7 +1003,16 @@ local function OverlayTexture_OnFadeOutFinished(animGroup)
 	local overlay = animGroup:GetParent()
 	overlay.pulse:Stop()
 	overlay:Hide()
-	tDeleteItem(lib.overlay.inUse[overlay.spellID], overlay)
+
+	local overlayList = lib.overlay.inUse[overlay.spellID]
+
+	for i = 1, #overlayList do
+		if overlayList[i] == overlay then
+			tremove(overlayList, i)
+			break
+		end
+	end
+
 	tinsert(lib.overlay.unused, overlay)
 end
 
@@ -1067,7 +1057,7 @@ function lib:Enable()
 		lib.eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 		lib.eventFrame:RegisterEvent("UNIT_AURA")
 
-		if lib.executeSpellIDs[lib.playerClass] then
+		if lib.ExecuteButtonSpells[lib.playerClass] then
 			lib.eventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
 		end
 	end
