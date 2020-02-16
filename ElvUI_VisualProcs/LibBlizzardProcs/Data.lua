@@ -698,8 +698,8 @@ LBP_Data.ButtonProcs = {
 	WARRIOR = {
 		-- Revenge
 		{6572},
-		-- Overpower
-		{7384},
+		-- Overpower / Taste for Blood
+		{7384, 60503},
 		-- Victory Rush
 		{34428},
 		-- Slam!
